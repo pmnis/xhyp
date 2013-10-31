@@ -1,0 +1,82 @@
+
+     __  __     _   ___   ______      _____ ____  _____ _____ 
+     \ \/ /    | | | \ \ / /  _ \    |  ___|  _ \| ____| ____|
+      \  /_____| |_| |\ V /| |_) |   | |_  | |_) |  _| |  _|  
+      /  \_____|  _  | | | |  __/    |  _| |  _ <| |___| |___ 
+     /_/\_\    |_| |_| |_| |_|       |_|   |_| \_\_____|_____|
+                                                              
+
+This programm is in alpha stage.
+It actually runs on a versatile board inside of qemu.
+
+This file gives you informations about using the xhyp hypervisor
+
+	0) configure xhyp
+	1) configure xhyp with guest domains
+	2) build xhyp core
+	3) test xhyp
+
+===============================================================================
+	0) configure xhyp
+
+First of all you need to configure xhyp.
+use: 
+# ./Build.sh menuconfig
+
+The first time, you will need the ncurses developpement package
+to be able to uild the menu itself.
+
+===============================================================================
+	1) configure xhyp with guest domains
+
+Use the config.domains file in the domains directory
+you will find informations on the structure of the file
+on the xhyp web site: http://xhyp.org/
+
+The configuration should be obvious.
+
+Use defaults domains you will find on the web site at
+	http://xhyp.org/download/
+
+or build your own domain using informations at
+	http://xhyp.org/support/documentation/
+
+
+===============================================================================
+	2) build xhyp core
+
+You need to use the Build.sh script.
+In this file is an include file depending on the architecture
+you will find it in the directory arch/${ARCH}/${BOARD}
+
+Actually there is only one architecture, arm, and one
+board supported, versatile.
+
+in this file, toolchain.inc you will probably need to change
+the cross compiler prefix and the PATH to find it.
+
+like:
+PATH=$PATH:/root/armbin
+export CROSS_COMPILE=${CROSS_COMPILE:-arm-none-linux-gnueabi-}
+
+you may also need to change appropriate options for C flags and
+assembler flags if you choose another cross compiler.
+
+Then you hopefully just need to start building xhyp with:
+
+# ./Build.sh
+
+
+===============================================================================
+
+	3) test xhyp
+
+You can actually test xhyp inside a qemu box with:
+
+#  qemu-system-arm -M versatilepb -kernel xhyp -nographic xhyp
+
+Contact us for more informations at contact@xhyp.org
+
+We expect to soon propose new architectures and boards for the xhyp
+hypervisor.
+

@@ -1,0 +1,31 @@
+#
+# This is ARINC scheduling definitions
+#
+# type	major or minor
+#	major
+#	each major frame has a slot start and a size
+#	each size must be large enough to hold minor slices
+#	minor
+#	each minor frame has a slot start and a size
+#	and an associated domain.
+#	The associated domain gets to run inside the slice
+# id	not used by xhyp, only here to facilitate the configuration
+#	frames are taken in order.
+# start offset from start of period in ticks
+# size	duration of the slice in ticks
+# domain_id	associated domain
+
+# type	id	offset	size	period
+major	A	0	20	30
+# type	id	offset	size	domain_id
+minor	c	1	1	7
+minor	1	2	2	1
+minor	2	4	4	2
+minor	3	8	1	3
+minor	c	10	1	7
+minor	4	11	1	4
+minor	5	12	1	5
+minor	6	13	1	6
+minor	c	15	1	7
+
+

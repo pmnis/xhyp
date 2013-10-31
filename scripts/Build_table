@@ -1,0 +1,86 @@
+#!/bin/ksh
+
+
+cat << EOF
+/*
+ * domain_table.c
+ *
+ * Declaration des domains
+ *
+ * Author: Pierre Morel <pmorel@mnis.fr>
+ *
+ * \$LICENSE:
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ */
+
+#include <xhyp/generated.h>
+#include <xhyp/config.h>
+#include <xhyp/mmu.h>
+#include <xhyp/domains.h>
+
+#include <sys/io.h>
+
+
+EOF
+
+print "struct domain domain_table[$(( dom + 1 ))] = {
+        {
+	.name = \"Xhyp\",
+	.size = XHYP_MEM_SIZE,
+	.type = DTYPE_HYP,
+	.prio = 31,
+	},
+"
+
+for (( i = 1 ; i <= dom ; i++ )) {
+	print "	{"
+	printf "	.name = \"%s\", \n" ${name[$i]}
+	printf "	.base_addr = %s, \n" ${base[$i]}
+	printf "	.sp = (struct shared_page *) %s, \n" ${base[$i]}
+	printf "	.tags_addr = %s + 0x4000, \n" ${base[$i]}
+	printf "	.size = %s, \n" ${size[$i]}
+	printf "	.flags = %s, \n" ${flgs[$i]}
+	printf "	.state = %s, \n" ${state[$i]}
+	printf "	.type = %s, \n" ${dom_type[$i]}
+	printf "	.drv_type = %s, \n" ${drv_type[$i]}
+	printf "	.prio = %s, \n" ${prio[$i]}
+	printf "	.id = %s, \n" $i
+	start=${base[$i]}
+	start=$(( start += ofst))
+	printf "	.load_addr = 0x%08lx, \n" ${start}
+	start=$((0x02000000))
+	printf "	.vbase_addr = 0x%08lx, \n" ${start}
+	start=$(( start += ofst))
+	printf "	.start_addr = 0x%08lx, \n" ${start}
+[[ ${dom_type[$i]} == "DTYPE_GPOS" ]] && {
+		printf "        .offset = 0xc00, \n"
+	}
+[[ ${dom_type[$i]} == "DTYPE_DRV" ]] && {
+		printf "        .device = CONFIG_PERIPH_BASE, \n"
+		printf "        .device_size = 0x00200000, \n"
+	}
+	printf "	.mode = DMODE_SVC, \n"
+	print "	},"
+}
+
+print "	};"
+
+print "struct domain *xhyp = &domain_table[0];"
+print "struct domain *current = NULL;"
+print "int nb_domains = $((dom + 1));"
+print "int nb_usr_domains = $((dom));"
+
+
+

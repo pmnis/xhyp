@@ -1,0 +1,41 @@
+# ARM configuration
+#
+
+menu "Board"
+	depends on ARM
+
+choice
+	prompt "ARM SOC"
+	default BOARD_VERSATILE
+	help
+	  Supported ARM based platform
+
+config BOARD_VERSATILE
+	bool "Versatile ARM926EJS"
+
+config BOARD_GEAM6425
+	bool "GEAM6425 ARM926EJS"
+
+config BOARD_REALVIEW
+	bool "Realview CORTEX A8"
+
+config BOARD_BEAGLE
+	bool "Beagle-Board Cortex A8"
+
+endchoice
+
+config MEMORY_SIZE
+	hex "Platform memory size (default to 128M)"
+	default 0x08000000
+	help
+	  default to 128M
+
+config PERIPH_BASE
+	hex "Peripheral base address"
+	default 0x10000000
+
+config PERIPH_SIZE
+	hex "Peripheral address size"
+	default 0x02000000
+
+endmenu

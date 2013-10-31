@@ -1,0 +1,41 @@
+
+
+menuconfig MENU_VERSATILE
+	bool "Versatile peripherals"
+	depends on BOARD_VERSATILE
+
+if MENU_VERSATILE
+
+menuconfig PL011
+	bool "PL011 serial controller"
+	default y
+	---help---
+	  Standard Versatile UART
+
+if PL011
+config PL011_OFFSET
+        hex "PL011 address offset"
+        depends on PL011
+        default 0x001F1000
+        ---help---
+          Offset for the PL011 chip
+endif
+
+menuconfig LAN91C111
+	bool "SMC LAN91C111"
+	default y
+	---help---
+	  Standard Versatile Ethernet controller
+
+if LAN91C111
+config LAN91C111_OFFSET
+        hex "LAN91C111 address offset"
+        depends on LAN91C111
+        default 0x001F1000
+        ---help---
+          Offset for the PL011 chip
+endif
+
+
+
+endif

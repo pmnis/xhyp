@@ -1,0 +1,36 @@
+# General configuration
+#
+
+mainmenu "XHYP Configuration"
+
+config HAVE_DOT_CONFIG
+	bool
+	default y
+
+choice 
+	prompt "Processor family"
+	default ARM
+	help
+	  Choose the corresponding processor
+config ARM
+	bool "ARM"
+config LEON
+	bool "LEON"
+config MIPS
+	bool "MIPS"
+config SH4
+	bool "SH4"
+config X86
+	bool "Intel"
+
+endchoice
+
+source "arch/arm/Kconfig"
+source "arch/leon/Kconfig"
+source "arch/mips/Kconfig"
+source "arch/sh4/Kconfig"
+source "arch/x86/Kconfig"
+
+source "kernel/Kconfig"
+
+

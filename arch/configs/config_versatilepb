@@ -1,0 +1,78 @@
+
+mainmenu "XHYP Configuration"
+
+config HAVE_DOT_CONFIG
+	bool
+	default y
+
+menu "XHYP Settings"
+
+menu "General Configuration"
+
+config DEBUG
+	bool "Debuging XHYP"
+	default n
+	help
+	  Helps you debugging your domains
+
+endmenu
+
+menu 'PLatform'
+
+choice
+	prompt "ARM SOC"
+	default VERSATILE
+	help
+	  Supported ARM based platform
+
+
+config VERSATILE
+	bool "Versatile ARM926EJS"
+
+config REALVIEW
+	bool "Realview CORTEX A8"
+
+config BEAGLE
+	bool "Beagle-Board Cortex A9"
+
+endchoice
+
+endmenu
+
+menu 'Domains'
+
+config NB_DOMAINS
+	int "Numbers of domains"
+	default 2
+	help
+	  This is the number of user domains.
+	  It is related to ARM domains for architectures
+	  that support it.
+	  The hypervisor itself uses one ARM domain
+
+endmenu
+
+menu 'Drivers'
+
+config CONSOLE
+	bool "console"
+	help
+	  XHYP console
+
+config NETWORK
+	bool "network"
+	help
+	  XHYP network
+
+config DISK
+	bool "disk"
+	help
+	  XHYP disk
+
+endmenu
+
+
+
+endmenu
+
+

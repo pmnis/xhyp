@@ -1,0 +1,11 @@
+
+
+menuconfig MENU_REALVIEW
+	bool "Realview board"
+	depends on BOARD_REALVIEW
+
+if MENU_REALVIEW
+
+comment "-------- Nothing to do ----------"
+
+endif

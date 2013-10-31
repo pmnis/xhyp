@@ -1,0 +1,21 @@
+
+menu 'Secure Drivers'
+
+config CONSOLE
+	bool "console"
+	help
+	  XHYP console
+
+config NETWORK
+	bool "network"
+	help
+	  XHYP network
+
+config DISK
+	bool "disk"
+	help
+	  XHYP disk
+
+endmenu
+
+

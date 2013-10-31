@@ -1,0 +1,131 @@
+# General configuration
+#
+
+menu "Hypervizor"
+
+config DEBUG
+	bool "Debuging XHYP"
+	default n
+	help
+	  Helps you debugging your domains
+
+config XHYP_XIP
+	bool "XHYP execute in place"
+	default n
+	help
+	  Use this if XHYP excutes from ROM
+
+config STACK_SIZE
+	hex "XHYP stack size"
+	default 0x1000
+	help
+	  This is the Hypervizor stack size
+	  default is one page.
+
+# The timer period
+#
+config TIMER_PERIOD
+	int "Timer period in ms"
+	default 10
+	help
+	  This is the timer period.
+	  For POSIX scheduling it will determine maximal latency when
+	  the kernel is not preemptible and no interrupt are allowed
+
+	  For ARINC it will determine the minimal minor frame size.
+
+	  For EDF it will determine the minimal deadline and budget.
+
+# Preemption model
+#
+choice
+	prompt "Preemption Model"
+	default PREEMPT_NONE
+
+
+config	PREEMPT_NONE
+	bool "No preemption during hypercalls"
+	help
+	  No preemption during hypercalls
+
+config PREEMPT_HYP
+	bool "Preemtible hypervisor"
+	help
+	  Hypercalls may be preempted
+
+endchoice
+
+# Scheduler type
+
+choice 
+	prompt "XHYP Scheduler"
+	default SCHED_POSIX
+
+config SCHED_ARINC
+	bool "ARINC-653 Scheduler"
+	help
+	  Scheduler with fixed round robin scheduling
+	  and fixed per partition time slices.
+
+config SCHED_POSIX
+	bool "POSIX scheduler"
+	help
+	  Scheduler with monotonic priorities.
+	  Provides SCHED_FIFO and SCHED_RR.
+
+config SCHED_EDF
+	bool "EDF Scheduler"
+	help
+	  Scheduler based on the EDF Scheduler
+	  with budget and deadlines for each partition.
+
+config SCHED_CBS
+	bool "CBS Scheduler"
+	help
+	  Scheduler based on the EDF Scheduler
+	  with periodic scheduling of the partitions.
+
+endchoice
+
+if !SCHED_POSIX
+
+config SCHED_SPORADIC
+	bool "Add Sporadic scheduling"
+	help
+	  not depending on the basic scheduler on specific events
+	  one partition is being prioritized.
+
+	  This allows for low latency on emergency.
+endif
+
+if SCHED_ARINC
+
+config ARINC_INT
+	bool "Domain Interrupt protection"
+	default n
+	help
+	  The hypervizor will not allow interrupt for
+	  one domain to occur in another domain.
+
+config ARINC_POLL
+	bool "Use polling and no interrupt"
+	default n
+	help
+	  Not interrupt are allowed but the timer
+	  interrupt to schedule partitions.
+
+config ARINC_SPORADIC
+	bool "Sporadic scheduling on domain switch"
+	depends on SCHED_SPORADIC
+	default n
+	help
+	  Usually sporadic scheduling appears on interrupt
+	  dedicated for this emergency.
+
+	  Using this switch, sproradic scheduling takes
+	  place only on domain switch.
+
+endif
+
+endmenu
+

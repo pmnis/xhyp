@@ -1,0 +1,11 @@
+
+
+menuconfig MENU_BEAGLE
+	bool "Beagle Board"
+	depends on BOARD_BEAGLE
+
+if MENU_BEAGLE
+
+comment "-------- Nothing to do ----------"
+
+endif

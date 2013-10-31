@@ -1,0 +1,142 @@
+#!/bin/ksh
+
+CFG="domains/config.domains"
+typeset -i dom=0
+typeset -x ofst="0x00100000"
+
+[[ -r ${CFG} ]] || {
+	print "Config file ${CFG} not found"
+	exit 1
+	}
+
+{
+	while read name base virt size flgs prio state dom_type drv_type path
+	do
+		[[ ! ${name} || ${name: 0:1} == "#" ]] && continue
+		((dom++))
+		name[${dom}]=${name}
+		base[${dom}]=${base}
+		virt[${dom}]=${virt}
+		size[${dom}]=${size}
+		flgs[${dom}]=${flgs}
+		prio[${dom}]=${prio}
+		state[${dom}]=${state}
+		dom_type[${dom}]=${dom_type}
+		drv_type[${dom}]=${drv_type}
+		path[${dom}]=${path}
+	done
+} < ${CFG}
+
+
+{
+cat << EOF
+OUTPUT_FORMAT("elf32-littlearm", "elf32-littlearm", "elf32-littlearm")
+OUTPUT_ARCH(arm)
+ENTRY(_start)
+
+MEMORY
+{
+  vecteurs :   org = 0x00000000 , l = 0x00008000
+  ram      :   org = 0x00008000 , l = 0x01ff8000
+EOF
+typeset -x org
+typeset -x len
+
+for ((i = 1; i <= dom; i++)) {
+	print "  ram_ctl${i} : org = ${base[$i]} , l = ${ofst}"
+	org=${base[$i]}
+	len=${size[$i]}
+	(( org += ofst ))
+	(( len -= ofst ))
+	printf "ram_dom${i} : org = 0x%08lx, l = 0x%08lx\n" ${org} ${len}
+}
+
+cat << EOF
+}
+PHDRS
+{
+  vect PT_LOAD;
+  text PT_LOAD;
+EOF
+
+for ((i = 1; i <= dom; i++)) {
+	print "  dom${i} PT_LOAD;"
+}
+
+cat << EOF
+}
+
+
+SECTIONS
+{
+        . = 0x00000000;
+
+        . = ALIGN(4);
+        .vect :
+        {
+                objs/start.o    (.text)
+        } > vecteurs : vect
+        .text :
+        {
+                objs/main.o     (.text)
+                *(.text)
+                *(.glue_7t)
+                *(.glue_7)
+        } > ram : text
+
+
+        . = ALIGN(4);
+        .rodata : { *(.rodata) } > ram
+
+        . = ALIGN(4);
+        __data_start = .;
+        .data : { *(.data) } > ram
+        __data_end = .;
+
+        . = ALIGN(4);
+        __bss_start = .;
+        .bss : { *(.bss) } > ram
+        __bss_end = .;
+
+        __hyp_end = .;
+
+EOF
+
+for ((i = 1; i <= dom; i++)) {
+	print "	.dm${i} : { } > ram_dom${i} : dom${i}"
+}
+
+cat << EOF
+        __end_of_all = . ;
+}
+
+EOF
+
+} > xhyp.ld
+
+cat << EOF > include/xhyp/generated.h
+
+#define NB_DOMAINS	$((dom +1 ))
+
+#ifndef __ASSEMBLY__
+extern int nb_domains;
+extern int nb_usr_domains;
+#endif
+
+EOF
+
+{
+source scripts/Build_table
+} > generated/domain_table.c
+
+
+
+for ((i = 1; i <= dom; i++)) {
+	name=$(printf "domains/domain%02d" $i)
+	printf "setting path for %s : %s\n" ${name} ${path[$i]}
+	mkdir ${name}
+	( cd ${name} ; ln -s ../../${path[$i]} os )
+} 
+
+
+exit 0
