@@ -19,7 +19,7 @@ void irq_handler(unsigned long irq_mask)
 {
 	printk("irq mask: 0x%08x cpsr %02lx\n", irq_mask, xhyp_sp->v_cpsr);
 	irq++;
-	_hyp_irq_return();
+	_hyp_irq_return(0);
 }
 
 #define MAX	10000000
