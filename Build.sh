@@ -4,8 +4,6 @@
 BASE=$(pwd)
 export INCLUDE=${BASE}/include
 
-
-
 # try find the board
 [[ -r .config ]] && source ./.config
 
@@ -43,6 +41,8 @@ function clean_all
 		( cd ${dir} ; ./Build.sh clean )
 	done
 	print "cleaning objects"
+	rm -rf generated
+	rm os/*.dom
 	rm -f xhyp xhyp.bin xhyp.ld xhyp.nm
 	rm -f files.in cscope.out
 	rm -f objs/*
@@ -61,9 +61,7 @@ function save_all
 function save_all_all
 {
 	cp /root/OSEO/linux/patches/xhyp.patch patches/
-	#( cd /root/OSEO/linux ; tar zcvf /data/linux_xhyp.tgz arch/xhyp)
 	cp /data/linux_xhyp.tgz ports/
-	#( cd /root/OSEO/ ; tar zcvf /data/freertos_xhyp.tgz FreeRTOS/)
 	cp /data/freertos_xhyp.tgz ports/
 	d=${PWD##/*/}
 	file=${d}_$(date +%Y%m%d_%H%M)_$$.tgz
@@ -141,7 +139,9 @@ do
 	[[ $line ]] && export $line
 done < .config
 
-./os/Build.sh || exit 1
+[[ -x ./os/Build.sh ]] && {
+	./os/Build.sh || exit 1
+	}
 
 ./scripts/Build_ld || exit 1
 
@@ -212,12 +212,9 @@ ${CC} ${CFLAGS} -c generated/domain_table.c -o generated/domain_table.o
 }
 
 printf "Linking xhyp ... "
-#set -x
-#export LDFLAGS="-Bstatic -T xhyp.ld  -Ttext ${LD_ADDR}"
+
 export LDFLAGS="-Bstatic -T xhyp.ld "
-#echo ${LD} ${LDFLAGS} ${LIBS} ${GENERATED} ${DOMAINS} -o xhyp
 ${LD} ${LDFLAGS} ${LIBS} ${GENERATED} ${DOMAINS} -o xhyp
-#${LD} ${LDFLAGS} arch/arm/common/*.o lib/xhyp.a lib/lib.a ${GENERATED} ${DOMAINS} -o xhyp
 arm-none-linux-gnueabi-nm xhyp > xhyp.nm
 
 

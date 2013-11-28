@@ -36,5 +36,5 @@ case $1 in
 		;;
 esac
 
-cp main ../../os/mmu_test
+cp main ../../os/mmu_test.dom
 

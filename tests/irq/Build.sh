@@ -45,5 +45,5 @@ case $1 in
 		;;
 esac
 
-cp irq_test ../../os/irq_test
+cp irq_test ../../os/irq_test.dom
 

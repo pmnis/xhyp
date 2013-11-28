@@ -125,6 +125,7 @@ extern int nb_usr_domains;
 
 EOF
 
+mkdir -p generated
 {
 source scripts/Build_table
 } > generated/domain_table.c
