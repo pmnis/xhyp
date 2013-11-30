@@ -52,7 +52,7 @@ call_entry_t	hypercall_table[_HYP_CALLS] = {
 	hyp_NONE,
 /*05*/	hyp_irq_request,
 	hyp_irq_enable,
-	hyp_NONE,	/* was hyp_irq_disable, */
+	hyp_irq_disable,
 	hyp_irq_return,
 	hyp_exit,
 /*10*/	hyp_cpuctrl,
@@ -466,7 +466,7 @@ int hyp_irq_enable(void)
 
 	return 0;
 }
-/*
+
 int hyp_irq_disable(void)
 {
 	struct shared_page *s = current->sp;
@@ -482,7 +482,7 @@ int hyp_irq_disable(void)
 	}
 	return 0;
 }
-*/
+
 int hyp_cpuctrl(void)
 {
 	unsigned long cp;

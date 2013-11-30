@@ -42,10 +42,11 @@ function clean_all
 	done
 	print "cleaning objects"
 	rm -rf generated
-	rm os/*.dom
+	rm -f os/*.dom
 	rm -f xhyp xhyp.bin xhyp.ld xhyp.nm
 	rm -f files.in cscope.out
 	rm -f objs/*
+	rm -f include/autoconf.h
 }
 
 function save_all
