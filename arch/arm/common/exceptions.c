@@ -76,6 +76,10 @@ void exp_irq(void)
 
 	debirq("switch from %08lx\n", _context->sregs.pc);
 	do_irq();
+
+	if (sched->need_resched)
+		schedule();
+
 	debirq("switch to %08lx\n", _context->sregs.pc);
         context_verify(_context);
         switch_to();
@@ -89,18 +93,20 @@ void exp_fiq(void)
 
 void exp_data_abrt(void)
 {
-	struct shared_page *s = current->sp;
 	unsigned long far;
 	unsigned long dfsr;
 
+	current->ctx = *_context;
+
 	event_new(EVT_ABT);
 
-	s->context_abt = *_context;
-	current->sr_abt = s->v_cpsr;
+	mode_save(current, current->mode);
         dfsr = _get_dfsr();
         far = _get_far();
 
 	do_abort(far, dfsr);
+
+	schedule();
 
         context_verify(_context);
         switch_to();
@@ -108,22 +114,22 @@ void exp_data_abrt(void)
 
 void exp_prefetch(void)
 {
-	struct shared_page *s = current->sp;
 	unsigned long far;
 	unsigned long dfsr;
 
 	debabt("PC at %08lx\n", _context->sregs.pc);
+
+	current->ctx = *_context;
 	event_new(EVT_ABT);
 
-	s->context_abt = *_context;
-	current->sr_abt = s->v_cpsr;
+	mode_save(current, current->mode);
         dfsr = 5;	/* Say it is a page fault */
         far = _context->sregs.pc;
 
 	do_abort(far, dfsr);
 
+	schedule();
 
-	debabt("no abt handling\n");
         context_verify(_context);
         switch_to();
 }
@@ -135,15 +141,18 @@ unsigned long exp_swi(unsigned long *instr)
 	unsigned long callnr;
 
 	/* Get syscall		*/
-	//ptr = (unsigned long *) virt_to_phys(current, (unsigned long)(--instr));
 	ptr = (unsigned long *) dom_virt_to_hyp(current, (unsigned long)(--instr));
 	callnr = *ptr & 0x00ffffff;
+
 
 	/* fake undefined expression because Qemu seems to bug */
 	if ((_context->cpsr & 0x1F) == 0x1B) {
 		debhyp("FAKED UNDEF SWI %d : %l\n", callnr, _context->cpsr);
 		exp_undefined();
 	}
+
+	current->ctx = *_context;
+	if (callnr > 1 ) debhyp("callnr: %d\n", callnr);
 
 	current->hypercall = callnr;
 	event_new(EVT_SYSIN);
@@ -159,9 +168,15 @@ unsigned long exp_swi(unsigned long *instr)
 		retval = -1;
 		while(1);
 	}
-	debhyp("call[%d] returning to %08lx\n", callnr, _context->sregs.pc);
+	//debhyp("resched(%d) call[%d] returning to %08lx\n", sched->need_resched, callnr, _context->sregs.pc);
 	event_new(EVT_SYSOUT);
+	//if (current->id == 1 && callnr != 1) debinfo("call[%d] returning to %08lx\n", callnr, _context->sregs.pc);
+
+	if (sched->need_resched)
+		schedule();
+	//if (current->id == 1 && callnr != 1) debinfo("NO schedule\n");
 	_context->regs.regs[0] = retval;
+	//debhyp("resched(%d) call[%d] returning to %08lx\n", sched->need_resched, callnr, _context->sregs.pc);
 	switch_to();
 
 	return retval;

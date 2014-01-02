@@ -63,16 +63,19 @@ int irq_request(int irq, int (*handler)(int, unsigned long))
  * Per domain virtual interrupt handling
  * irq: IRQ_MASK
  */
+int ic = 0;
 void send_irq(struct domain *d, unsigned long irq)
 {
 	struct shared_page *s;
 
 	s = d->sp;
-	debirq("d[%d] mode:%d: %08lx\n", d->id, d->mode, irq);
-	if (d->id == 1) {
-			//debinfo("d[%d] %02lx E:%08lx M:%08lx P:%08lx\n", d->id, s->v_cpsr, s->v_irq_enabled, s->v_irq_mask, s->v_irq_pending);
-	}
+	if (d->state & (DSTATE_STOP|DSTATE_NONE|DSTATE_DEAD))
+		return;
+
 	if (d->type == DTYPE_HYP) return;	/* Hypervizor domain	*/
+
+	debirq("d[%d] mode:%d: %08lx\n", d->id, d->mode, irq);
+
 	if (d->mode == DMODE_IRQ) return;	/* Already in IRQ	*/
 	if (!(s->v_irq_enabled & irq)) return;	/* IRQ not enabled	*/
 	if (s->v_cpsr & dis_irqs) return;	/* SOC IRQS disabled	*/
@@ -81,9 +84,11 @@ void send_irq(struct domain *d, unsigned long irq)
 	/* update statistics	*/
 	d->irq++;
 	/* If the domain is sleeping, wake it up	*/
+	debirq("[%d]: state 0x%08lx mode 0x%08lx\n", d->id, d->state, d->mode);
 	if (d->state == DSTATE_SLEEP) {
 		sched->add(d);
 		d->state = DSTATE_READY;
+		debirq("[%d]: state 0x%08lx mode 0x%08lx\n", d->id, d->state, d->mode);
 	}
 	/* mark the IRQ as pending in the shared page	*/
 	s = d->sp;
@@ -92,29 +97,15 @@ void send_irq(struct domain *d, unsigned long irq)
 	irq &= ~s->v_irq_mask;			/* clear masked IRQ	*/
 	if (!irq) return;			/* deliver later	*/
 
-	/* The domain will transit to handle IRQ	*/
-	mode_new(d, DMODE_IRQ);		/* New mode is DMODE_IRQ	*/
-
 	if (d == current) {
-		/* Save the context to shared page	*/
-		debirq("save context %d to context_irq: pc = %08lx\n", d->id, _context->sregs.pc);
-		s->context_irq = *_context;
 		/* Setup context for next slice		*/
 		d->ctx = *_context;
-	} else {
-		debirq("save context %d to context_irq: pc = %08lx\n", d->id, d->ctx.sregs.pc);
-		/* use already saved context	*/
-		s->context_irq = d->ctx;
-		sched->need_resched++;
 	}
-	/* setup the IRQ registers		*/
-	d->ctx.sregs.sp = d->sp_sys;
-	d->ctx.sregs.pc = d->pc_irq;
-	d->ctx.regs.regs[0] = irq;
-	s->v_spsr = s->v_cpsr;
-	s->v_cpsr &= ~m_mask;
-	s->v_cpsr |= m_irq;		/* Set IRQ mode		*/
-	s->v_cpsr |= dis_irqs;		/* disable SOC IRQS	*/
+	/* The domain will transit to handle IRQ	*/
+	mode_new(d, DMODE_IRQ);		/* New mode is DMODE_IRQ	*/
+	if (d->id > 0) { debirq("d[%d] mode:%d: %08lx\n", d->id, d->mode, irq); }
+//if (ic-- < 0 ) while(1);
+	sched->need_resched++;
 }
 
 /*
@@ -146,8 +137,8 @@ void do_irq(void)
 	while(mask) {
 		if (mask & 0x01) {
 			if (irq_table[irq]) {
-				irq_table[irq](irq, NULL);
 				pic_clear(irq);
+				irq_table[irq](irq, NULL);
 				do_v_irq(irq);
 				pic_enable(irq);
 			} else {

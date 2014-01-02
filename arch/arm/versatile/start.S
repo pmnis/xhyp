@@ -381,23 +381,6 @@ _get_spsr:
 _setup_domain:
 	mcr	p15, 0, r0, c3, c0, 0	@ Load domain's register
 	mov	pc, lr
-/* It management */
-.globl _cpu_it_enable
-_cpu_it_enable:
-	mrs	r0,cpsr		@ LOAD PROCESSOR STATUS REGISTER
-	bic	r0,r0,#dis_irq	@ BIT CLEAR dis_irq
-	msr	cpsr,r0
-	mov	r0, r0
-	mov	r0, r0
-	mov	r0, r0
-	mov	pc, lr
-
-.globl _cpu_it_disable
-_cpu_it_disable:
-	mrs	r0,cpsr		@ LOAD PROCESSOR STATUS REGISTER
-	orr	r0,r0,#dis_irq	@ disable IRQs
-	msr	cpsr,r0
-	mov	pc, lr
 
 .globl _get_cpsr
 _get_cpsr:
@@ -446,22 +429,32 @@ _clean_d_entry:
 	mcr     p15, 0, r0, c7, c10, 4
 	mov	pc, lr
 
-.globl _wfi
-_wfi:
-	mrs     r0, cpsr			@ Disable IRQ
-	orr     r0, r0, #0xc0
-	msr	cpsr, r0
-	mov	r0, #0
-        mcr     p15, 0, r0, c7, c0, 4           @ Wait for interrupt
-	mrs     r0, cpsr			@ enable IRQ
-	bic     r0, r0, #0xc0
-	msr	cpsr, r0
+/*
+**	IRQ management
+*/
+.globl _cpu_it_enable
+_cpu_it_enable:
+	mrs	r0,cpsr		@ LOAD PROCESSOR STATUS REGISTER
+	bic	r0,r0,#dis_irq	@ BIT CLEAR dis_irq
+	msr	cpsr,r0
+	mov	r0, r0
+	mov	r0, r0
+	mov	r0, r0
 	mov	pc, lr
 
-.globl _wfi2
-_wfi2:
-        mrs     r0, cpsr                        @ enable IRQ
-        bic     r0, r0, #0xc0
-        msr     cpsr, r0
-        b       _wfi2
+.globl _cpu_it_disable
+_cpu_it_disable:
+	mrs	r0,cpsr		@ LOAD PROCESSOR STATUS REGISTER
+	orr	r0,r0,#dis_irq	@ disable IRQs
+	msr	cpsr,r0
+	mov	pc, lr
+# Wait for interrupt in V5TE
+.globl _wfi
+_wfi:
+	mrs     r0, cpsr			@ Enable IRQ
+	bic     r0, r0, #0xc0
+	msr	cpsr, r0
 
+	mov	r0, #0
+        mcr     p15, 0, r0, c7, c0, 4           @ Wait for interrupt
+	b	_wfi

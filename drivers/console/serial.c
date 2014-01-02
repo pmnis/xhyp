@@ -140,17 +140,22 @@ char *gets(char *str)
 {
 	char *s = str;
 	char c;
-
+//printk("1================== str: %p\n", s);
 	do {
 		c = (char) serial_getc();
 		if (c == 0) {
+//printk("2================== str: %p\n", s);
 			_hyp_idle();
+//printk("3================== str: %p\n", s);
 			continue;
 		}
 		if (c == '\r' || c == '\n') {
+			//while(1);
 			*s = 0;
 			return str;
 		}
+//printk("4================== str: %p\n", s);
+			//while(1);
 		*s++ = c;
 	} while(1);
 }

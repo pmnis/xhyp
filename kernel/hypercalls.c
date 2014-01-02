@@ -147,7 +147,7 @@ int hyp_task_switch(void)
 	struct context *ctx;
 
 	/* save old context to shared page	*/
-	s->context_sys = *_context;
+	//s->context_sys = *_context;
 	/* Point to new context			*/
 	ctx = (struct context *)(virt_to_phys(current, CTX_arg0));
 {
@@ -158,12 +158,13 @@ int hyp_task_switch(void)
 		debhyp("%02d %p %08lx\n", i, p, *p);
 	}
 }
-	ctx->sregs.lr = ctx->sregs.pc;
+	ctx = &s->context_sys;
+	//ctx->sregs.lr = ctx->sregs.pc;
 	/* Verify context				*/
 	context_verify(ctx);
 	/* Copy new context to current context	*/
 	*_context = *ctx;
-
+	//debinfo("PC: %08lx\n", ctx->sregs.pc);
 	return 0;
 }
 
@@ -209,34 +210,22 @@ int hyp_undef_request(void)
 
 int hyp_abt_return(void)
 {
-	struct context *ctx;
 	struct shared_page *s = current->sp;
 
 	event_new(EVT_ABTRET);
-	ctx = &s->context_abt;
-	/* be sure we do not enable a priviledge mode */
-	ctx->sregs.spsr &= ~0xef;
 
-	s->v_cpsr = current->sr_abt ;
 
-	mode_new(current, current->old_mode);
+	debinfo("SET CPSR to %08lx\n", s->v_cpsr);
+
+	mode_set(current, current->old_mode);
 	event_new(EVT_ABTOUT);
 
-	*_context = s->context_abt;
+	*_context = current->ctx;
 
 	context_verify(_context);
 
-	{
-	int i;
-	unsigned long *p = (unsigned long *) _context;
-
-		for (i = 0; i < 17; i++, p++)
-			debinfo("reg[%02d]: %08lx\n", i, *p);
-	debinfo("pc at %08lx\n", _context->sregs.pc);
-	//p = show_mmu_entry(current, _context->sregs.pc);
-	//debinfo("%08lx : %08lx\n", p, *p);
-	}
-
+	/* be sure we do not enable a priviledge mode */
+	_context->sregs.spsr &= ~0xef;
 	switch_to();
 
 	debpanic("NEVER REACHED\n");
@@ -244,14 +233,15 @@ int hyp_abt_return(void)
 }
 int hyp_pgfault_request(void)
 {
-	/* sur ABT request: sauver PC et SP dans le shadow	*/
-	/* Ils seront positionnes dans les registres lors de l emulation */
+	struct shared_page *s = current->sp;
 
-	current->pc_abt = _context->regs.regs[0];
-	current->sp_abt = _context->regs.regs[1];
-	if (!current->sp_sys)
-		current->sp_sys = current->sp_abt;
-	debinfo("sp at %08lx\n", current->sp_abt );
+	/* For compatibility: save it in shared_page	*/
+
+	s->context_abt.sregs.pc = _context->regs.regs[0];
+	s->context_abt.sregs.sp = _context->regs.regs[1];
+	debabt("PC: %08lx\n", s->context_abt.sregs.pc);
+	debabt("SP: %08lx\n", s->context_abt.sregs.sp);
+
 	return 0;
 }
 
@@ -264,15 +254,15 @@ int hyp_setmode(void)
 
 int hyp_syscall_request(void)
 {
-	current->pc_sys = _context->regs.regs[0];
-	if (!current->sp_sys)
-		current->sp_sys = _context->regs.regs[1];
+	struct shared_page *s = current->sp;
+
+	s->context_sys.sregs.pc = _context->regs.regs[0];
+	s->context_sys.sregs.sp = _context->regs.regs[1];
 	return 0;
 }
 
 int hyp_syscall(void)
 {
-	struct shared_page *s = current->sp;
 	unsigned long callnr;
 
 	if (current->type == DTYPE_GPOS) {
@@ -282,30 +272,13 @@ int hyp_syscall(void)
 	}
 	debinfo("========= syscall %d  -  0x%08lx============\n", callnr, callnr);
 	if (current->mode != DMODE_USR) panic(_context, "Wrong mode\n");
+while(1);
+	mode_new(current, DMODE_SVC);
 
-	s->context_sys = *_context;
+	*_context = current->ctx;
 
-	current->sr_sys = s->v_cpsr;
-
-	if (!current->pc_sys)
-		sched->kill(current);
-
-	debinfo("pc                      : %08lx\n", _context->sregs.pc);
-	debinfo("Going to current->pc_sys: %08lx\n", current->pc_sys);
-	debinfo("stack at current->sp_sys: %08lx\n", current->sp_sys);
-	{
-	int i;
-	unsigned long *p = (unsigned long *) _context;
-
-		for (i = 0; i < 17; i++, p++)
-			debinfo("reg[%02d]: %08lx\n", i, *p);
-	debinfo("pc at %08lx\n", _context->sregs.pc);
-	}
-	_context->sregs.sp = current->sp_sys;
-	_context->sregs.pc = current->pc_sys;
 	_context->regs.regs[0] = callnr;
 
-	mode_new(current, DMODE_SVC);
 	current->syscall++;
 
 	switch_to();
@@ -316,27 +289,11 @@ while(1);
 
 int hyp_syscall_return(void)
 {
-	struct shared_page *s = current->sp;
 
 	debinfo("\n");
-	if (current->mode != DMODE_SVC) panic(_context, "Wrong mode\n");
 
 	/* fake shadow registers save */
-	current->sp_sys = _context->sregs.sp;
-
-	/* fake shadow register loading */
-	s->v_cpsr = current->sr_sys;
-	*_context = s->context_sys;
-
-	{
-	int i;
-	unsigned long *p = (unsigned long *) _context;
-
-		for (i = 0; i < 17; i++, p++)
-			debinfo("reg[%02d]: %08lx\n", i, *p);
-	debinfo("pc at %08lx\n", _context->sregs.pc);
-	}
-	mode_new(current, DMODE_USR);
+	mode_set(current, DMODE_USR);
 
 	switch_to();
 	
@@ -394,14 +351,9 @@ int hyp_console(void)
  */
 int hyp_irq_return(void)
 {
-	struct shared_page *s = current->sp;
-
 	event_new(EVT_IRQOUT);
-	mode_new(current, current->old_mode);
+	mode_set(current, current->old_mode);
 
-	*_context = s->context_irq;
-	s->v_cpsr &= ~dis_irqs;
-	debirq("retrieve context from context_irq: pc = %08lx\n", _context->sregs.pc);
 	/* be sure we do not enable a priviledge mode */
 	context_verify(_context);
 
@@ -412,22 +364,9 @@ int hyp_irq_return(void)
 
 int hyp_usr_return(void)
 {
-	struct shared_page *s = current->sp;
+	mode_set(current, DMODE_USR);
 
-	/* Save context in standard location	*/
-	debinfo("SP at %08lx\n", _context->sregs.sp);
-	current->sp_sys = _context->sregs.sp;
-	/* domain has put registers in shared page	*/
-	*_context = s->context_usr;
-	debinfo("SP at %08lx\n", _context->sregs.sp);
-	debinfo("PC at %08lx\n", _context->sregs.pc);
-	/* be sure we do not enable a priviledge mode	*/
-	context_verify(_context);
-
-	mode_new(current, DMODE_USR);
-
-        context_verify(_context);
-        switch_to();
+	schedule();
 
 	return 0;
 }
@@ -435,14 +374,10 @@ int hyp_usr_return(void)
 
 int hyp_irq_request(void)
 {
-	/* sur IRQ request: sauver PC et SP dans le shadow	*/
-	/* Ils seront positionnes dans les registres lors de l emulation */
-
-	current->pc_irq = _context->regs.regs[0];
-	current->sp_irq = _context->regs.regs[1];
-	if (!current->sp_sys)
-		current->sp_sys = current->sp_irq;
-
+	struct shared_page *s = current->sp;
+	s->context_irq.sregs.pc = _context->regs.regs[0];
+	s->context_irq.sregs.sp = _context->regs.regs[1];
+	//debinfo("PC: %08lx SP: %08lx\n", s->context_irq.sregs.pc, s->context_irq.sregs.sp);
 	return 0;
 }
 
@@ -452,10 +387,13 @@ int hyp_irq_enable(void)
 	unsigned long irq = _context->regs.regs[0];
 
 	if (irq) {
-		debinfo("Enabling %08lx\n", irq);
+		//debinfo("Enabling %08lx\n", irq);
 		s->v_irq_enabled |= irq;
 	} else
 		s->v_cpsr &= ~dis_irqs;
+	//debinfo("SET CPSR to %08lx\n", s->v_cpsr);
+	if (s->v_cpsr == 0x12)
+		while(1);
 
 	if (s->v_cpsr & dis_irqs)
 		return 0;
@@ -463,7 +401,13 @@ int hyp_irq_enable(void)
 	irq = s->v_irq_enabled & ~s->v_irq_mask;
 	if (irq)
 		send_irq(current, irq);
-
+	//debinfo("back with cpsr: %08lx\n", s->v_cpsr);
+	//debinfo("back with pc  : %08lx\n", _context->sregs.pc);
+	//debinfo("back with sp  : %08lx\n", _context->sregs.sp);
+	if (s->v_cpsr == 0x12) {
+		debinfo("STOP\n");
+		while(1);
+	}
 	return 0;
 }
 
@@ -479,6 +423,15 @@ int hyp_irq_disable(void)
 	default:
 		s->v_irq_enabled &= ~irq;
 		break;
+	}
+	if (s->v_cpsr == 0xd3)
+		return 0;
+	debirq("SET CPSR to %08lx\n", s->v_cpsr);
+	//if (s->v_cpsr == 0xd2)
+		//debug_level = DEB_ALL;
+	if (s->v_cpsr == 0x12) {
+		debpanic("unprotected IRQ\n");
+		while(1);
 	}
 	return 0;
 }
@@ -595,7 +548,7 @@ int hyp_hyp(void)
 		return 1;
 	case HYPCMD_DOM_RESTART:
 		d = &domain_table[n];
-		debinfo("%d: old %d state %d\n", d->id, d->old_state, d->state);
+		//debinfo("%d: old %d state %d\n", d->id, d->old_state, d->state);
 		switch (d->state) {
 	 	case DSTATE_READY:
 	 	case DSTATE_RUN:
@@ -609,7 +562,7 @@ int hyp_hyp(void)
 			break;
 	 	case DSTATE_STOP:
 	 	case DSTATE_NONE:
-			debinfo("was stopped : %d %d\n", DSTATE_READY, DSTATE_STOP);
+			//debinfo("was stopped : %d %d\n", DSTATE_READY, DSTATE_STOP);
 			d->state = DSTATE_READY;
 			break;
 		default:

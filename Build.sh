@@ -51,11 +51,14 @@ function clean_all
 
 function save_all
 {
+	set -x
 	d=${PWD##/*/}
 	file=${d}_$(date +%Y%m%d_%H%M)_$$.tgz
 	print "saving directory $d to ../${file}"
-	(cd ..; print excluding files in ${d}/TAR.EXCLUDE)
-	(cd .. ; d=$(readlink $d); tar zcvf ${file} -X ${d}/TAR.EXCLUDE ${d} )
+	#(cd ..; print excluding files in ${d}/TAR.EXCLUDE)
+	#(cd .. ; d=$(readlink $d); tar zcvf ${file} -X ${d}/TAR.EXCLUDE ${d} )
+	#[[ -l ../${d} ]] && d=$(readlink $d)
+	(cd .. ; tar zcvf ${file} ${d} )
 	exit 0
 }
 
@@ -125,7 +128,7 @@ function build_cscope
 	exit 1
 }
 
-clean_all
+#clean_all
 
 source ./.config
 

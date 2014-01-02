@@ -260,7 +260,7 @@ int cmd_psl(char *s, char *args)
 	int i;
 	struct domain d;
 
-	printk("SP at %p size SP: %d\n", xhyp_sp, sizeof(struct shared_page));
+	//printk("SP at %p size SP: %d\n", xhyp_sp, sizeof(struct shared_page));
 	printk("  ID Tp St Md oM base_add load_add   rights ");
 	printk("Pr Bg Pd     sl     ir     nr  hy  irq_mask irq_enab irq_pend Name"
 		"\n");
@@ -430,7 +430,7 @@ void serial_irq(void)
 {
 	unsigned long status;
 
-	_hyp_console("serial_irq\n", 8);
+	_hyp_console("serial_irq\n", 11);
 	status = chip->rirq;
 	printk("Serial status %08lx\n", status);
 	if (status) {
@@ -468,30 +468,34 @@ void poll_qports(void )
 
 void serial_poll(void)
 {
-	//_hyp_console("serial_poll\n", 8);
+	_hyp_console("serial_poll\n", 12);
 	poll_qports();
 }
 
 void timer_irq(void)
 {
 	/* Nothing yet	*/
-	//_hyp_console("timer_irq\n", 8);
+	//_hyp_console("timer_irq\n", 10);
 	poll_qports();
 }
 
-void handler(unsigned long mask)
+void handler(unsigned long msk)
 {
-	//_hyp_console("IRQ\n", 4);
+	//char p[256];
+	unsigned long mask = xhyp_sp->v_irq_pending;
+
+	//sprintf(p, "msk: %08lx\n", mask);
+	//_hyp_console(p, strlen(p));
 	if (mask & IRQ_MASK_TIMER)
 		timer_irq();
-//#ifndef CONFIG_ARINC
+#ifndef CONFIG_ARINC
 	if (mask & IRQ_MASK_QPORT)
 		poll_qports();
 	if (mask & IRQ_MASK_UART)
 		serial_irq();
 	if (mask & IRQ_MASK_EVENT)
 		printk("Event on sampling port: %08lx\n", xhyp_sp->sampling_port);
-//#endif
+#endif
 
 	/* acknowledge the irq	*/
 	xhyp_sp->v_irq_ack = mask;
@@ -517,6 +521,11 @@ void qport_init(void)
 		queuing_port_init(qp, QPORT_IN);
 		qp->flags |= QPORT_READY|QPORT_TO_DRV;
 	}
+}
+void show_irqs(char *p)
+{
+	sprintf(p, "msk: %08lx enab: %08lx\n", xhyp_sp->v_irq_mask, xhyp_sp->v_irq_enabled);
+	_hyp_console(p, strlen(p));
 }
 
 void start_kernel(void)

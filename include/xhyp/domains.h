@@ -136,22 +136,20 @@ struct domain {
 	struct timespec	t_usr;
 /* Virtualisation stuff				*/
 	unsigned long	mmu_on;
-	unsigned long	pc_sys;
-	unsigned long	pc_abt;
-	unsigned long	pc_irq;
-	unsigned long	sp_sys;
-	unsigned long	sp_abt;
-	unsigned long	sp_irq;
-	unsigned long	sr_sys;
-	unsigned long	sr_abt;
-	unsigned long	sr_irq;
-	unsigned long	(*v_irq_handler)(unsigned long);
+	struct context	ctx;
+	//struct shadow	s_usr;
+	//struct shadow	s_irq;
+	//struct shadow	s_abt;
+	//struct shadow	s_und;
+	//struct shadow	s_sys;
+	//struct shadow	s_rst;
+	//unsigned long	(*v_irq_handler)(unsigned long);
 	unsigned long	v_irq_pending;
 	unsigned long	v_irq_enabled;
 	unsigned long	v_irq_mask;
-	struct context	ctx;
 	unsigned long	drv_type;
 	unsigned long	v_pgd;
+	unsigned long	v_cpsr;
 };
 
 struct runqueue {
@@ -220,33 +218,14 @@ static inline void switch_to(void)
 {
 	_dom_ttb = current->tbl_l1;
 	_dom_rights = current->rights;
+	_context->sregs.spsr &= ~0xff;
+	_context->sregs.spsr |= 0x10;
         _switch_to();
 }
 
-static inline void mode_new(struct domain *d, int mode)
-{
-	unsigned long cpsr;
+extern void mode_new(struct domain *d, int mode);
+extern void mode_save(struct domain *d, int mode);
+extern void mode_set(struct domain *d, int mode);
 
-	d->old_mode = d->mode;
-	d->mode = mode;
-	
-	d->sp->v_spsr = d->sp->v_cpsr;
-	cpsr = d->sp->v_cpsr & ~m_mask;
-	switch (mode) {
-	case DMODE_IRQ:
-		cpsr |= m_irq|dis_fiq|dis_irq;
-		break;
-	case DMODE_ABT:
-		cpsr |= m_abt|dis_fiq|dis_irq;
-		break;
-	case DMODE_USR:
-		cpsr |= m_usr;
-		break;
-	case DMODE_SVC:
-		cpsr |= m_svc;
-		break;
-	}
-	d->sp->v_cpsr = cpsr;
-}
 #endif
 

@@ -33,7 +33,6 @@ struct pl190	*pic = (struct pl190 *) (PERIPH_BASE + PIC_OFFSET);;
 
 void pic_init(void)
 {
-	debirq("\n");
 	pic = (struct pl190 *) (periph_base + PIC_OFFSET);
 	pic->enable = 0;
 }
@@ -53,7 +52,7 @@ unsigned long pic_enable(int irq)
 	unsigned long mask;
 
 	mask = 0x01 << irq;
-	pic->enable |= mask;
+	if (irq == 4) pic->enable |= mask;
 
 	return mask;
 }

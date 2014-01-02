@@ -113,7 +113,7 @@ if (abt_count-- <= 0) {
 		while(1);
 	}
 	/* if no abort handler kill the domain		*/
-	if (! current->pc_abt) {
+	if (! s->context_abt.sregs.pc) {
 		debpanic("Data abort but no abort handler\n");
 		debpanic("sp....: %08lx\n", _context->sregs.sp);
 		debpanic("lr....: %08lx\n", _context->sregs.lr);
@@ -129,16 +129,10 @@ if (abt_count-- <= 0) {
 
 	/* Save old mode and set new mode to ABT	*/
 	mode_new(current, DMODE_ABT);
-	/* Copy register but keep handler address	*/
-	_context->sregs.pc = current->pc_abt;
-	debinfo("current mode %08lx\n", s->v_spsr);
-	debinfo("current mode %08lx\n", s->v_cpsr);
-	if ((m_mask & s->v_spsr) == m_usr)
-		_context->sregs.sp = current->sp_sys;
 
 	/* add fault address and cause		*/
-	CTX_arg0 = far;
-	CTX_arg1 = dfsr;
+	current->ctx.regs.regs[0] = far;
+	current->ctx.regs.regs[1] = dfsr;
 
 	debabt("\n");
 }

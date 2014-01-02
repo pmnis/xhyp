@@ -71,7 +71,7 @@ extern int isatty(int fd);
 extern int cpu_number(void);
 extern int sockserv(int port, char *path);
 extern char *getenv(const char *name);
-
+extern int sprintf(char *buf, const char *fmt, ...);
 
 #define atoi(s)	strtol((s), (char **)0, 10)
 #define atol(s)	strtol((s), (char **)0, 10)

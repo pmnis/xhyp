@@ -145,7 +145,6 @@ void start_xhyp (unsigned long r0, unsigned long cpuid, struct tag *tagp)
 
 	/* Should never been reached	*/
 	deb_printf(DEB_PANIC, "System idle, cpsr: 0x%08x\n", _get_cpsr());
-	_wfi2();
 	while(1)
 		;
 }

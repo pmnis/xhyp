@@ -80,3 +80,20 @@ Contact us for more informations at contact@xhyp.org
 We expect to soon propose new architectures and boards for the xhyp
 hypervisor.
 
+===============================================================================
+
+	4) Building a para virtualized OS
+
+Once you ported your OS on x-hyp you can test it by first 
+compute a binary to include in the x-hyp image.
+For example for Linux:
+
+        LINUX=${LINUX_BASE}/vmlinux
+        ${CROSS_COMPILE}objcopy $LINUX -O  binary os/linux.bin
+
+You must of course first initialize the LINUX and CROSS_COMPILE variables.
+
+then add the configuration in the domains/config.domains file
+For example for Linux:
+
+

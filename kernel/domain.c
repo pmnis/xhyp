@@ -48,11 +48,14 @@ extern void show_it(void);
 void show_ctx(struct context *ctx)
 {
 	int index;
-	unsigned *p;
+	unsigned long *p;
 
-	for (index = 0; index < 13; index++)
-		deb_printf(DEB_CTX, "r%d  	%08x\n", index, ctx->regs.regs[index]);
+	for (index = 0, p = (unsigned long *)ctx; index < 24; index++, p++) {
+		printk("%08x ", *p);
+		if ( index % 8 == 7 ) printk("\n");
+	}
 
+/*
 	deb_printf(DEB_CTX, "sp  	%08x\n", ctx->sregs.sp);
 	deb_printf(DEB_CTX, "lr  	%08x\n", ctx->sregs.lr);
 	deb_printf(DEB_CTX, "pc  	%08x\n", ctx->sregs.pc);
@@ -62,10 +65,10 @@ void show_ctx(struct context *ctx)
 	deb_printf(DEB_CTX, "dfsr	%08x\n", ctx->dfsr);
 	deb_printf(DEB_CTX, "ifsr	%08x\n", ctx->ifsr);
 	deb_printf(DEB_CTX, "domain	%08x\n", ctx->domain);
-
 	p = (unsigned *) current->tbl_l1;
 	for (index = 0; index < 4; index++)
 		deb_printf(DEB_CTX, "%08x\n", *p++);
+*/
 }
 
 void update_page_table(struct domain *d)
@@ -219,7 +222,7 @@ int setup_domains(void)
 			continue;
 		/* Initialize state and mode	*/
 		d->old_mode = DMODE_INIT;
-		mode_new(current, DMODE_SVC);
+		mode_set(d, DMODE_SVC);
 		/* allocate page table	*/
 		alloc_page_tables(d);
 		/* setup soft page table	*/
@@ -275,3 +278,87 @@ int setup_domains(void)
 	return 0;
 }
 
+
+void mode_save(struct domain *d, int mode)
+{
+	struct shared_page *s = d->sp;
+
+	//debinfo("save [%d] mode %x\n", d->id, mode);
+	//debinfo("[%d] PC %08lx SP %08lx LR %08lx PSR %08lx\n", d->id, d->ctx.sregs.pc, d->ctx.sregs.sp, d->ctx.sregs.lr, d->ctx.sregs.spsr);
+	//show_ctx(&d->ctx);
+	//debinfo("VCPSR: %08lx\n", s->v_cpsr);
+	switch (mode) {
+	case DMODE_IRQ:
+		s->context_irq = d->ctx;
+		break;
+	case DMODE_SVC:
+		s->context_sys = d->ctx;
+		d->v_cpsr = s->v_cpsr;
+		break;
+	case DMODE_USR:
+		s->context_usr = d->ctx;
+		break;
+	case DMODE_ABT:
+		s->context_abt = d->ctx;
+		break;
+	case DMODE_UND:
+		s->context_und = d->ctx;
+		break;
+	default:
+		debpanic("Should not append, mode %d\n", mode);
+		while(1);
+		break;
+	}
+}
+
+void mode_set(struct domain *d, int mode)
+{
+	struct shared_page *s = d->sp;
+
+	d->mode = mode;
+	//debinfo("set [%d] mode %x\n", d->id, mode);
+	switch (mode) {
+	case DMODE_IRQ:
+		d->ctx.sregs = s->context_irq.sregs;
+		s->v_cpsr = m_irq|dis_irqs;
+		break;
+	case DMODE_ABT:
+		d->ctx.sregs = s->context_abt.sregs;
+		if (d->old_mode == DMODE_SVC)
+			d->ctx.sregs.sp = s->context_sys.sregs.sp;
+		else {
+			debinfo("[%d] old mode %x\n", d->id, d->old_mode);
+			d->ctx.sregs.sp = s->context_usr.sregs.sp;
+	//C'est Linux qui doit faire cela pas toi !!!!!
+			while(1);
+		}
+		s->v_cpsr = m_abt|dis_irqs;
+		debabt("save context at %08lx\n", &d->ctx);
+		break;
+	case DMODE_USR:
+		d->ctx = s->context_usr;
+		s->v_cpsr = m_usr;
+		break;
+	case DMODE_SVC:
+		d->ctx = s->context_sys;
+		s->v_cpsr = (m_svc|d->v_cpsr);
+		break;
+	default:
+		debpanic("Should not append, mode %d\n", mode);
+		while(1);
+		break;
+	}
+	d->ctx.sregs.spsr &= 0xff;
+	d->ctx.sregs.spsr |= 0x10;
+	//debinfo("[%d] PC %08lx SP %08lx LR %08lx PSR %08lx\n", d->id, d->ctx.sregs.pc, d->ctx.sregs.sp, d->ctx.sregs.lr, d->ctx.sregs.spsr);
+	//debinfo("VCPSR: %08lx\n", s->v_cpsr);
+	//show_ctx(&d->ctx);
+	sched->need_resched++;
+}
+
+void mode_new(struct domain *d, int mode)
+{
+	mode_save(d, d->mode);
+	d->old_mode = d->mode;
+	mode_set(d, mode);
+}

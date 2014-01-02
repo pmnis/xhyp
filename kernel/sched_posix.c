@@ -119,6 +119,8 @@ static void sched_sleep(struct domain *d)
 	d->state = DSTATE_SLEEP;
 	sched_delete(d);
 	d->ctx = *_context;
+	//if (d->id > 0 ) debinfo("\n");
+	//if (d->id > 0 ) show_ctx(&d->ctx);
 	schedule();
 }
 
@@ -150,8 +152,19 @@ static void sched_yield(void)
 
 static void sched_wakeup(struct domain *d)
 {
+/*
+	if (d->id == 1) {
+		debsched("d[1]: state %08lx mode %08lx\n", d->state, d->mode);
+		if (d->mode == DMODE_IRQ) {
+			debpanic("STOP\n");
+			while (1);
+		}
+	}
+*/
 	d->state = DSTATE_RUN;
 	*_context = d->ctx;
+	debsched("PC %08lx SP %08lx LR %08lx PSR %08lx\n",
+		_context->sregs.pc, _context->sregs.sp, _context->sregs.lr, _context->sregs.spsr);
 	switch_to();
 }
 
