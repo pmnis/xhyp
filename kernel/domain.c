@@ -328,9 +328,9 @@ void mode_set(struct domain *d, int mode)
 			d->ctx.sregs.sp = s->context_sys.sregs.sp;
 		else {
 			debinfo("[%d] old mode %x\n", d->id, d->old_mode);
-			d->ctx.sregs.sp = s->context_usr.sregs.sp;
+			//d->ctx.sregs.sp = s->context_usr.sregs.sp;
 	//C'est Linux qui doit faire cela pas toi !!!!!
-			while(1);
+			//while(1);
 		}
 		s->v_cpsr = m_abt|dis_irqs;
 		debabt("save context at %08lx\n", &d->ctx);

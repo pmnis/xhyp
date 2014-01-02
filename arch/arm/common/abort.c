@@ -29,6 +29,7 @@
 #include <xhyp/hyp.h>
 #include <xhyp/debug.h>
 #include <xhyp/shared_page.h>
+#include <xhyp/mmu.h>
 
 
 /*
@@ -131,9 +132,13 @@ if (abt_count-- <= 0) {
 	mode_new(current, DMODE_ABT);
 
 	/* add fault address and cause		*/
-	current->ctx.regs.regs[0] = far;
-	current->ctx.regs.regs[1] = dfsr;
+	if (current->old_mode == DMODE_SVC)
+		current->ctx.regs.regs[0] = phys_to_virt(current, (unsigned long ) &s->context_sys);
+	else
+		current->ctx.regs.regs[0] = phys_to_virt(current, (unsigned long ) &s->context_usr);
+	current->ctx.regs.regs[1] = far;
+	current->ctx.regs.regs[2] = dfsr;
 
-	debabt("\n");
+	debabt("SP: %08lx\n", current->ctx.sregs.sp);
 }
 
