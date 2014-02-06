@@ -81,7 +81,7 @@ void send_irq(struct domain *d, unsigned long irq)
 	s = d->sp;
 	if (!(s->v_irq_enabled & irq))
 		return;
-	debirq("IRQ for domain %d : %08lx\n", d->id, irq);
+	if (d->id == 4 && irq != 0x10) debinfo("IRQ for domain %d : %08lx\n", d->id, irq);
 	s->v_irq_pending |= irq;
 	switch (d->state) {
 	case DSTATE_SLEEP:

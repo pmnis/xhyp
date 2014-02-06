@@ -151,6 +151,7 @@ debpanic("d->base_addr %08lx XHYP_MEM_SIZE %08lx (d->offset << SECTION_SHIFT) %0
 	cnt = fifo_put(&qp->fifo, (char *)ptr, cnt);
 	return 0;
 
+	debinfo("sending to console\n");
 	send_irq(console_domain, IRQ_MASK_QPORT);
 
 	return cnt;
@@ -188,6 +189,7 @@ int hyp_io_write(void)
 
 	cnt = fifo_put(&qp->fifo, ptr, cnt);
 
+	debinfo("sending to %d\n", d->id);
 	send_irq(d, IRQ_MASK_QPORT);
 
 	return cnt;
