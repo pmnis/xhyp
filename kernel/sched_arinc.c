@@ -115,28 +115,28 @@ static int sched_get(void)
 static void sched_sleep(struct domain *d)
 {
 	d->state = DSTATE_SLEEP;
-	d->ctx = *_context;
+	context_save();
 	schedule();
 }
 
 static void sched_kill(struct domain *d)
 {
 	d->state = DSTATE_DEAD;
-	d->ctx = *_context;
+	context_save();
 	schedule();
 }
 
 static void sched_stop(struct domain *d)
 {
 	d->state = DSTATE_STOP;
-	d->ctx = *_context;
+	context_save();
 	schedule();
 }
 
 static void sched_yield(void)
 {
 	debsched("\n");
-	current->ctx = *_context;
+	context_save();
 	current->state = DSTATE_READY;
 	schedule();
 }
@@ -145,8 +145,6 @@ static void sched_wakeup(struct domain *d)
 {
 	d->state = DSTATE_RUN;
 	d->slices++;
-	*_context = d->ctx;
-	switch_to();
 }
 
 static void sched_dom(struct domain *d)

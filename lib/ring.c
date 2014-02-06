@@ -25,6 +25,25 @@
 #include <xhyp/stdlib.h>
 #include <xhyp/debug.h>
 
+unsigned int ring_get_entry(struct ring *f, void *p, unsigned int size, unsigned int num)
+{
+	unsigned int ro;
+	unsigned int cnt;
+	unsigned int n = f->wi - f->ri;
+
+	cnt = size * num;
+	if (cnt > n)
+		return 0;
+	ro = f->wi % f->sz;
+	if ( cnt <= ro ) {
+		memcpy(p, f->p + ro - cnt, size);
+		return size;
+	}
+	n = cnt - ro;
+	memcpy(p, f->p + f->sz - n, size);
+	return size;
+}
+
 unsigned int ring_copy(struct ring *f, void *p, unsigned int cnt, int modify)
 {
 	unsigned int ro;

@@ -1,3 +1,7 @@
+/*! \file types.h
+ * \brief Types definitions
+ */
+
 #ifndef __ASM_ARM_TYPES_H
 #define __ASM_ARM_TYPES_H
 

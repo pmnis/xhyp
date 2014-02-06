@@ -19,6 +19,10 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
+/*! \file stdlib.h
+ * \brief The C standard library
+ */
+
 #ifndef STDLIB_H
 #define STDLIB_H
 

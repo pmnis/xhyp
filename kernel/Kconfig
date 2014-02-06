@@ -87,6 +87,28 @@ config SCHED_CBS
 
 endchoice
 
+if SCHED_POSIX
+
+choice
+	prompt	"POSIX POLICY"
+	default	SCHED_POLICY_FIFO
+
+config SCHED_POLICY_FIFO
+	bool "POSIX FIFO policy"
+	help
+	  Scheduler will run in first in first out
+	  policy the domains with the same priority
+
+config SCHED_POLICY_RR
+	bool "POSIX Round Robin policy"
+	help
+	  Scheduler will run in round robin the domains
+	  with the same priority
+
+endchoice
+
+endif
+
 if !SCHED_POSIX
 
 config SCHED_SPORADIC

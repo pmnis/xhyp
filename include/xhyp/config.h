@@ -1,3 +1,13 @@
+/** @file config.h
+ *  @brief General XHYP configuration file
+ *
+ *  This file contains definition for the domains
+ *  base address.
+ *
+ *  @author Pierre Morel (pmorel)
+ *  @bug No known bugs
+ */
+
 /*
  * config.h
  *
@@ -67,7 +77,6 @@ extern unsigned long periph_base;
 #define D02_PHYS2VIRT	D02_BASE_ADDR - D02_VBASE_ADDR
 #define D02_SIZE	CONFIG_D02_SIZE
 #define D02_FLAGS	DFLAGS_CACHE_WT
-//#define D02_OFFSET	0xC00	/* if linux is C0 */
 #define D02_OFFSET	0x00	/* if linux is C0 */
 
 #define D03_BASE_ADDR	CONFIG_D03_ADDR

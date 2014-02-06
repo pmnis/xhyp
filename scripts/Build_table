@@ -54,7 +54,7 @@ for (( i = 1 ; i <= dom ; i++ )) {
 	printf "	.flags = %s, \n" ${flgs[$i]}
 	printf "	.state = %s, \n" ${state[$i]}
 	printf "	.type = %s, \n" ${dom_type[$i]}
-	printf "	.drv_type = %s, \n" ${drv_type[$i]}
+	printf "	.d_drv_type = %s, \n" ${drv_type[$i]}
 	printf "	.prio = %s, \n" ${prio[$i]}
 	printf "	.id = %s, \n" $i
 	start=${base[$i]}

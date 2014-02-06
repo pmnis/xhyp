@@ -39,9 +39,19 @@
 
 #include <sys/io.h>
 
+/** @file main.c
+ *  @brief XHYP startup routines
+ */
 
+/** @var unsigned long periph_base
+ *  @brief Virtual address of periferals
+ */
 unsigned long periph_base = PERIPH_BASE;
 
+/** @fn void show_tags(struct tag *tag)
+ * @brief DEBUG function to print the TAG structure
+ * @param tag A pointer to the TAG structure
+ */
 void show_tags(struct tag *tag)
 {
 	int i;
@@ -64,13 +74,6 @@ void show_tags(struct tag *tag)
 }
 
 /*
- * function: start_xhyp
- * parameters:
- * 	- r0, r1 and r2 from SOC
- * purpose:
- * 	called from assembly on RESET
- * 	do main hardware initializations
- */
 void show_it(void)
 {
         unsigned long *p = (unsigned long *)domain_table[4].tbl_l1;
@@ -80,8 +83,16 @@ void show_it(void)
         p++;
         debinfo("coarse at %p: %08lx\n", p, *p);
 }
+*/
 
-void start_xhyp (unsigned long r0, unsigned long cpuid, struct tag *tagp)
+/** @fn void start_xhyp(unsigned long r0, unsigned long cpuid, struct tag *tagp)
+ * @brief Called from assembly on RESET to do main hardware initializations
+ * @param r0
+ * @param cpuid CPU code identification
+ * @param tagp	Pointer to TAG or DTB
+ */
+
+void start_xhyp(unsigned long r0, unsigned long cpuid, struct tag *tagp)
 {
 	unsigned long r;
 
@@ -140,11 +151,13 @@ void start_xhyp (unsigned long r0, unsigned long cpuid, struct tag *tagp)
 
 	/* Start the first domain	*/
 	printk("x-hyp scheduler: %s\n", sched->name);
-	wfi();
 
+	schedule();
+	/* Wait for an interrupt	*/
+	//wfi();
 
 	/* Should never been reached	*/
-	deb_printf(DEB_PANIC, "System idle, cpsr: 0x%08x\n", _get_cpsr());
+	debpanic("System idle, cpsr: 0x%08x\n", _get_cpsr());
 	while(1)
 		;
 }

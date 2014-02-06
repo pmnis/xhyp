@@ -36,8 +36,6 @@ case $1 in
 		;;
 esac
 
-cp main ../../os/console.dom
+cp main ../../os/console.dom || exit 1
 
-${OBJCOPY} --gap-fill=0xff -O binary main domain.bin
-${STRIP} -s main -o main.striped
-
+exit 0

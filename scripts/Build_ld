@@ -36,7 +36,8 @@ ENTRY(_start)
 
 MEMORY
 {
-  vecteurs :   org = 0x00000000 , l = 0x00008000
+  vecteurs :   org = 0x00000000 , l = 0x00007000
+  context :   org = 0x00007000 , l = 0x00001000
   ram      :   org = 0x00008000 , l = 0x01ff8000
 EOF
 typeset -x org
@@ -135,6 +136,7 @@ source scripts/Build_table
 for ((i = 1; i <= dom; i++)) {
 	name=$(printf "domains/domain%02d" $i)
 	printf "setting path for %s : %s\n" ${name} ${path[$i]}
+	[[ -d ${name} ]] && continue
 	mkdir ${name}
 	( cd ${name} ; ln -s ../../${path[$i]} os )
 } 

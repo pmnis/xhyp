@@ -1,3 +1,7 @@
 .config.old
 .kconfig.d
 os/linux_32M
+Config.OLD
+T1
+include/autoconf.h
+setpte.txt

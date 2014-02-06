@@ -60,14 +60,14 @@ int timer_handler(int irq, unsigned long data)
 	in_timer = 1;
 	jiffies++;
 	tval = timer->val;
-	event_new(EVT_IRQ);
-	//debinfo("%ld %lx\n", jiffies, tval);
+	debirq("%ld %lx\n", jiffies, tval);
 	timer->ctrl &= ~ SP804_ENABLE;
 	timer->itclear = 0;
 	//timer->load = period;
 	timer->ctrl |= SP804_ENABLE;
 	sched->slice();		/* This is a scheduler entry	*/
 	in_timer = 0;
+	debirq("%ld %lx\n", jiffies, tval);
 	return 0;
 }
 

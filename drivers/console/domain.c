@@ -278,7 +278,7 @@ int cmd_psl(char *s, char *args)
 			printk(" %6d %6d %6d %3d", 
 				 d.slices, d.irq, d.nb_hypercalls, d.hypercall);
 			printk("  %08x %08x %08x", 
-				 d.v_irq_mask, d.v_irq_enabled, d.v_irq_pending);
+				 d.d_irq_mask, d.d_irq_enabled, d.d_irq_pending);
 			printk(" %-08s ", d.name);
 			printk("\n");
 		}
@@ -343,7 +343,7 @@ void event_show(struct event *event)
 
 	printk("%6d.%06d %5d %2d %08lx %12s %2d %08s %08s\n", sec, usec, event->nr,
 		event->id, event->state,
-		event_str[event->event], event->syscall,
+		event_str[event->event], event->hypercall,
 		mode_str[event->c_mode], mode_str[event->o_mode]);
 }
 
@@ -484,6 +484,7 @@ void handler(unsigned long msk)
 	//char p[256];
 	unsigned long mask = xhyp_sp->v_irq_pending;
 
+	xhyp_sp->v_irq_pending = 0;
 	//sprintf(p, "msk: %08lx\n", mask);
 	//_hyp_console(p, strlen(p));
 	if (mask & IRQ_MASK_TIMER)
@@ -558,7 +559,9 @@ void start_kernel(void)
 	printk(COLOR_BLACK);
 	serial_init();
 
-	IRQ_enable();
+	printk("Hello\n");
+
+	_hyp_irq_enable(0);
 	while(1) {
 		f = IRQ_mask(-1);
 		printk("x-hyp: ");

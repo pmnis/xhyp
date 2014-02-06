@@ -37,9 +37,9 @@
 #define dis_irq		0x80
 #define dis_irqs	0xc0
 /* MSK: Disable IRQ and FIQ, set ARM state and Supervisor mode		*/
-#define mode_init	m_svc | dis_irq | dis_fiq
+#define mode_init	(m_svc|dis_irqs)
 #define mode_domain	m_usr
-#define mask_domain	0xef
+#define mask_domain	(dis_irqs|m_mask)
 /*
  *	C0:	Status Register
  *	C1:	Control Register

@@ -35,6 +35,8 @@ struct xhyp_scheduler {
 	int need_resched;
 	int preempt_count;
 	void (*add) (struct domain *);
+	void (*add_from_sleep) (struct domain *);
+	void (*add_to_sleep) (struct domain *);
 	void (*delete) (struct domain *);
 	void (*put) (struct domain *);
 	int (*get) (void);
@@ -55,6 +57,5 @@ extern struct xhyp_scheduler *sched;
 #define SCHED_EDF	0x0004
 #define SCHED_IRQ	0x1000
 
-#define irq_ready(d)       ((d->v_irq_pending & d->v_irq_enabled) && !(d->sp->v_cpsr & dis_irq))
-
+#define exit()	sched->kill(current)
 #endif

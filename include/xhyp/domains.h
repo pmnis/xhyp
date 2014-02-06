@@ -67,7 +67,11 @@
 #define DMODE_ABT	0x0004
 #define DMODE_UND	0x0005
 #define DMODE_FIQ	0x0006
-#define DMODE_SIZE	0x0007
+#define DMODE_SYSCALL	0x0007
+#define DMODE_HYPCALL	0x0008
+#define DMODE_SIZE	0x0009
+
+#define DFLAGS_HYPCALL	0x0001
 
 #define DMEV_INIT	0x00
 #define DMEV_IRQ	0x01
@@ -97,6 +101,9 @@ struct domain {
 	unsigned long	type;
 	unsigned long	flags;
 	unsigned long	tag;
+	unsigned long	d_sum;
+	int		ctx_level;
+	int		no_check;
 	char name[32];
 /* Load stuff 					*/
 	unsigned long	base_addr;
@@ -137,6 +144,7 @@ struct domain {
 /* Virtualisation stuff				*/
 	unsigned long	mmu_on;
 	struct context	ctx;
+	struct context	ctx_syscall;
 	//struct shadow	s_usr;
 	//struct shadow	s_irq;
 	//struct shadow	s_abt;
@@ -144,12 +152,12 @@ struct domain {
 	//struct shadow	s_sys;
 	//struct shadow	s_rst;
 	//unsigned long	(*v_irq_handler)(unsigned long);
-	unsigned long	v_irq_pending;
-	unsigned long	v_irq_enabled;
-	unsigned long	v_irq_mask;
-	unsigned long	drv_type;
-	unsigned long	v_pgd;
-	unsigned long	v_cpsr;
+	unsigned long	d_irq_pending;
+	unsigned long	d_irq_enabled;
+	unsigned long	d_irq_mask;
+	unsigned long	d_drv_type;
+	unsigned long	d_pgd;
+	unsigned long	d_cpsr;
 };
 
 struct runqueue {

@@ -36,13 +36,16 @@
 //unsigned long debug_level = DEB_PANIC|DEB_INFO|DEB_HYP|DEB_IRQ|DEB_SCHED|DEB_CTX;
 //unsigned long debug_level = DEB_PANIC|DEB_INFO|DEB_HYP|DEB_PTE|DEB_CTX;
 //unsigned long debug_level = DEB_PANIC|DEB_INFO|DEB_HYP|DEB_PTE;
-unsigned long debug_level = DEB_PANIC|DEB_INFO|DEB_ABT;
+//unsigned long debug_level = DEB_PANIC|DEB_INFO|DEB_ABT;
 //unsigned long debug_level = DEB_PANIC|DEB_INFO|DEB_SCHED|DEB_CTX;
 //unsigned long debug_level = DEB_PANIC|DEB_INFO|DEB_ABT|DEB_IRQ|DEB_SCHED;
 //unsigned long debug_level = DEB_PANIC|DEB_INFO|DEB_ABT|DEB_IRQ|DEB_HYP|DEB_SCHED;
-//unsigned long debug_level = DEB_PANIC|DEB_INFO|DEB_SCHED;
-//unsigned long debug_level = DEB_PANIC|DEB_INFO;
+//unsigned long debug_level = DEB_PANIC|DEB_INFO|DEB_SCHED|DEB_IRQ|DEB_CTX;
+//unsigned long debug_level = DEB_PANIC|DEB_INFO|DEB_PTE|DEB_ABT;
 //unsigned long debug_level = DEB_PANIC;
+unsigned long debug_level = DEB_PANIC|DEB_INFO;
+//unsigned long debug_level = DEB_PANIC|DEB_INFO|DEB_SCHED;
+//unsigned long debug_level = DEB_PANIC|DEB_INFO|DEB_SCHED|DEB_CTX|DEB_HYP|DEB_IRQ;
 //
 
 int PANIC = 0;
@@ -51,16 +54,17 @@ void panic(struct context *ctx, char *s)
 {
 	unsigned long r;
 
+	debpanic("PANIC: %s\n",s);
 	if (PANIC++) while(1);	/* Avoid double fault */
-	r = _cpu_it_disable(0);
-	printk("PANIC: %s\n",s);
+	//r = _cpu_it_disable(0);
+	debpanic("PANIC: %s\n",s);
 	debug_level |= DEB_CTX | DEB_PANIC ;
 	if (ctx) {
-		deb_printf(DEB_PANIC, "Registers dump...at :\n", ctx);
+		debpanic("Registers dump...at :\n", ctx);
 		show_ctx(ctx);
 	} else {
 		if (current) {
-			deb_printf(DEB_PANIC, "Context dump...:\n", &current->ctx);
+			debpanic("Context dump...:\n", &current->ctx);
 			show_ctx(_context);
 		}
 	}

@@ -13,7 +13,12 @@ coarse=$((pte & 0xfffffc00))
 domain=$(( (pte & 0x000001e0) >> 5))
 type=$(( pte & 0x03 ))
 
+(( type == 1 )) && {
+	printf "type		:	%x\n" $type
+	printf "coarse entry	:	0x%08x\n" $coarse
+	printf "domain		:	%x\n" $domain
+	exit 0
+}
+print "this is not a coarse entry"
 printf "type		:	%x\n" $type
-printf "coarse entry	:	0x%08x\n" $coarse
-printf "domain		:	%x\n" $domain
-
+exit 1

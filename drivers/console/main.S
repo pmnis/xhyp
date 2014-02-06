@@ -87,16 +87,21 @@ _hyp_irq_disable:
 .globl _hyp_irq_return
 _hyp_irq_return:
 	swi	#_HYP_irq_return
+hang:
+	b	hang
 
 .globl _hyp_syscall
 _hyp_syscall:
 	swi	#_HYP_syscall
+sys_hang:
+	b	sys_hang
 
 .globl _hyp_pgfault_request
 _hyp_pgfault_request:
 	swi	#_HYP_pgfault_request
 
 .globl _hyp_undef_request
+
 _hyp_undef_request:
 	swi	#_HYP_undef_request
 

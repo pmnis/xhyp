@@ -41,9 +41,15 @@
 #include <xhyp/arinc.h>
 #endif
 
+/** @file hypercalls.c
+ * @brief numerous hypercall implementation
+ */
+
 int hyp_NONE(void);
 
-
+/** @var call_entry_t    hypercall_table[_HYP_CALLS]
+ * @brief hypercalls table
+ */
 call_entry_t	hypercall_table[_HYP_CALLS] = {
 /*00*/	hyp_syscall,
 	hyp_console,
@@ -98,11 +104,30 @@ call_entry_t	hypercall_table[_HYP_CALLS] = {
 /*50*/	hyp_preempt_enable,
 	hyp_hyp,
 	hyp_abt_return,
-	hyp_usr_return
+	hyp_usr_return,
+	hyp_get_tls,
+	hyp_cmpxchg,
+	hyp_cmpxchg64
 };
 
+/** @var int hypercall_count[_HYP_CALLS]
+ * @brief statistics on hypercalls
+ */
 int hypercall_count[_HYP_CALLS];
 
+/** @fn void hyp_mode_set(unsigned long mode)
+ * @brief set new mode for hypercalls
+ */
+void hyp_mode_set(unsigned long mode)
+{
+	mode_set(current, mode);
+	if (!sched->need_resched)
+		context_restore();
+}
+
+/** @fn void show_hypercall_count(void)
+ * @brief show statistics on hypercalls
+ */
 void show_hypercall_count(void)
 {
 	int i;
@@ -132,42 +157,23 @@ void show_mmu(unsigned long *pgd)
  * r2: PC
  * r3: 
  */
-
-int context_verify(struct context *ctx)
-{
-	/* force SPSR to user mode	*/
-	ctx->sregs.spsr &= ~mask_domain;
-	ctx->sregs.spsr |= mode_domain;
-	return 0;
-}
-
+/** @fn int hyp_task_switch(void)
+ * @brief hypercall to switch context
+ */
 int hyp_task_switch(void)
 {
-	struct shared_page *s = current->sp;
 	struct context *ctx;
 
-	/* save old context to shared page	*/
-	//s->context_sys = *_context;
 	/* Point to new context			*/
 	ctx = (struct context *)(virt_to_phys(current, CTX_arg0));
-{
-	unsigned long *p = (unsigned long *)ctx;
-	int i;
-
-	for (i = 0; i < 32; i++, p++) {
-		debhyp("%02d %p %08lx\n", i, p, *p);
-	}
-}
-	ctx = &s->context_sys;
-	//ctx->sregs.lr = ctx->sregs.pc;
-	/* Verify context				*/
-	context_verify(ctx);
-	/* Copy new context to current context	*/
+	/* Setup the next context		*/
 	*_context = *ctx;
-	//debinfo("PC: %08lx\n", ctx->sregs.pc);
 	return 0;
 }
 
+/** @fn int hyp_NONE(void)
+ * @brief place holder for unimplemented hypercall
+ */
 int hyp_NONE(void)
 {
 	panic(NULL, "Unimplemented");
@@ -175,9 +181,16 @@ int hyp_NONE(void)
 }
 
 
+/** @fn int hyp_new_pgd(void)
+ * @brief set new pgd
+ *
+ * @detailed
+ * - CTX_arg0 is a pointer to the user's PGD
+ */
 int hyp_new_pgd(void)
 {
 	new_pgd_at((unsigned long *) CTX_arg0);
+debinfo("\n");
 	switch_to();
 	return 0;
 }
@@ -208,29 +221,29 @@ int hyp_undef_request(void)
 	return 0;
 }
 
+/** @fn int hyp_abt_return(void)
+ * @brief return from ABORT mode
+ *
+ * @detailed
+ * The user may have set the old mode register
+ * to handle return from data abort
+ */
 int hyp_abt_return(void)
 {
-	struct shared_page *s = current->sp;
-
 	event_new(EVT_ABTRET);
+	hyp_mode_set(current->old_mode);
 
-
-	debinfo("SET CPSR to %08lx\n", s->v_cpsr);
-
-	mode_set(current, current->old_mode);
-	event_new(EVT_ABTOUT);
-
-	*_context = current->ctx;
-
-	context_verify(_context);
-
-	/* be sure we do not enable a priviledge mode */
-	_context->sregs.spsr &= ~0xef;
-	switch_to();
-
-	debpanic("NEVER REACHED\n");
 	return 0;
 }
+
+/** @fn int hyp_pgfault_request(void)
+ * @brief Register PC and SP for the abort mode
+ *
+ * @detailed
+ * Parameters are passed through registers:
+ * - CTX_arg0 is the PC
+ * - CTX_arg1 is the SP
+ */
 int hyp_pgfault_request(void)
 {
 	struct shared_page *s = current->sp;
@@ -239,8 +252,8 @@ int hyp_pgfault_request(void)
 
 	s->context_abt.sregs.pc = _context->regs.regs[0];
 	s->context_abt.sregs.sp = _context->regs.regs[1];
-	debabt("PC: %08lx\n", s->context_abt.sregs.pc);
-	debabt("SP: %08lx\n", s->context_abt.sregs.sp);
+	debinfo("PC: %08lx\n", s->context_abt.sregs.pc);
+	debinfo("SP: %08lx\n", s->context_abt.sregs.sp);
 
 	return 0;
 }
@@ -252,69 +265,135 @@ int hyp_setmode(void)
 	return 0;
 }
 
+/** @fn int hyp_syscall_request(void)
+ * @brief Register PC and SP for the syscall mode
+ *
+ * @detailed
+ * Parameters are passed through registers:
+ * - CTX_arg0 is the PC
+ * - CTX_arg1 is the SP
+ */
 int hyp_syscall_request(void)
 {
 	struct shared_page *s = current->sp;
 
-	s->context_sys.sregs.pc = _context->regs.regs[0];
-	s->context_sys.sregs.sp = _context->regs.regs[1];
+	current->ctx_syscall.sregs.pc = _context->regs.regs[0];
+	current->ctx_syscall.sregs.sp = _context->regs.regs[1];
+	debinfo("PC: %08lx\n", s->context_sys.sregs.pc);
+	debinfo("SP: %08lx\n", s->context_sys.sregs.sp);
+
+
 	return 0;
 }
 
+int deb_on = 0;
+unsigned long last_callnr = 0;
+unsigned long last_spsr = 0;
+/** @fn int hyp_syscall(void)
+ * @brief Hypercall to implement system calls
+ *
+ * @detailed
+ * The call depends on the system used, if the domain type is GPOS
+ * the syscall number is passed through R7 while RTOS use R0
+ * - CTX_reg0 is the callnr
+ * - CTX_reg7 is the callnr
+ *
+ * @bug this must change, no reason to change the registers here
+ */
 int hyp_syscall(void)
 {
 	unsigned long callnr;
+	struct shared_page *s = current->sp;
 
 	if (current->type == DTYPE_GPOS) {
 		callnr = _context->regs.regs[7];
 	} else {
 		callnr = _context->regs.regs[0];
 	}
-	debinfo("========= syscall %d  -  0x%08lx============\n", callnr, callnr);
+
+	last_callnr = callnr;
+	last_spsr = _context->sregs.spsr;
+
+	debinfo("========= syscall %d (%x)  SPSR   0x%08lx  PC 0x%08lx=======\n", callnr, callnr, _context->sregs.spsr, _context->sregs.pc);
 	if (current->mode != DMODE_USR) panic(_context, "Wrong mode\n");
-while(1);
-	mode_new(current, DMODE_SVC);
 
-	*_context = current->ctx;
+	mode_new(current, DMODE_SYSCALL);
 
-	_context->regs.regs[0] = callnr;
+	debinfo("========= syscall %d  SPSR   0x%08lx =======\n", callnr, s->context_usr.sregs.spsr);
+
+deb_on = 1;
 
 	current->syscall++;
 
-	switch_to();
-while(1);
-	/* Never reached	*/
-	return 0;
+	return callnr;
 }
 
+/** @fn int hyp_syscall_return(void)
+ * @brief Hypercall to implement return from system calls
+ *
+ * @detailed
+ * The user have changed the registers for the USER mode
+ * on returning from system call
+ */
 int hyp_syscall_return(void)
 {
+	struct shared_page *s = current->sp;
+	unsigned long retval, spsr;
+	unsigned long callnr = last_callnr;
 
-	debinfo("\n");
+	retval = s->context_usr.regs.regs[0];
+	debinfo("retval: %08lx\n", retval);
 
-	/* fake shadow registers save */
-	mode_set(current, DMODE_USR);
+	debinfo("========= syscall %d  SPSR   0x%08lx =======\n", callnr, s->context_usr.sregs.spsr);
+	hyp_mode_set(DMODE_USR);
+	debinfo("========= syscall %d  SPSR   0x%08lx =======\n", callnr, s->context_usr.sregs.spsr);
+	debinfo("========= syscall %d  SPSR   0x%08lx =======\n", last_callnr, current->ctx.sregs.spsr);
 
-	switch_to();
-	
-	debpanic("NON IMPLEMENTE\n");
-while(1);
-	/* Unreached	*/
-	return 0;
+	spsr = current->ctx.sregs.spsr;
+
+if (spsr != last_spsr) while(1);
+
+	return retval;
 }
 
+/** @fn int hyp_yield(void)
+ * @brief Hypercall to implement yield
+ *
+ * @detailed
+ * The domain wants to go to idle mode
+ */
 int hyp_yield(void)
 {
-	debinfo("BEGIN\n");
+	debirq("BEGIN\n");
 	sched->yield();
 	/* Never reached	*/
-	deb_printf(DEB_CALL, "END\n");
+	debpanic("PANIC: should not been reached\n");
+	while(1);
 	return 0;
 }
 
-#define COLOR_BLACK     "[30m"
-#define COLOR   "[3"
-
+/** @fn int hyp_console(void)
+ * @brief output to the console
+ *
+ * @detailed
+ * This hypercall uses two registers:
+ * - REG1 hold the size of a string or 0 if a caracter to print is inside R0
+ * - REG0 holds the caracter to print if R1 is 0 or a pointer to a string
+ *
+ * To facilitate debugging, the console print caracters in color
+ * according to the domain id red,green,yellow,blue... i.e 30+x
+ * from the standard VT220 color set
+ *
+ * Normaly domains should not use the console hypercall but 
+ * should prefer the io_write hypercall to the standard output
+ * which would go to a console driver.
+ * 
+ * using the console is bad because the output is done on the
+ * time of the domain but may also overflow to next scheduled
+ * domain.
+ *
+ * @bug this function should disapear if a console driver is present
+ */
 int hyp_console(void)
 {
 	char *s;
@@ -340,122 +419,58 @@ int hyp_console(void)
 	serial_write(COLOR_BLACK, 5);
 	return n - 1;
 }
-
-/*
- * function: hyp_irq_return
- * purpose :
- * 	called when the guest finished his IRQ handler
- * 	set the context back from the shared page
- * 	where the domain could have changed it
- * 	for context switch purpose for exemple.
+/** fn int hyp_usr_return(void)
+ * @brief Hypercall to return to use mode
+ * usefull to implement first user thread
+ *
  */
-int hyp_irq_return(void)
-{
-	event_new(EVT_IRQOUT);
-	mode_set(current, current->old_mode);
-
-	/* be sure we do not enable a priviledge mode */
-	context_verify(_context);
-
-	event_new(EVT_IRQRET);
-
-	return 0;
-}
-
 int hyp_usr_return(void)
 {
-	mode_set(current, DMODE_USR);
-
-	schedule();
+	hyp_mode_set(DMODE_USR);
 
 	return 0;
 }
 
-
-int hyp_irq_request(void)
-{
-	struct shared_page *s = current->sp;
-	s->context_irq.sregs.pc = _context->regs.regs[0];
-	s->context_irq.sregs.sp = _context->regs.regs[1];
-	//debinfo("PC: %08lx SP: %08lx\n", s->context_irq.sregs.pc, s->context_irq.sregs.sp);
-	return 0;
-}
-
-int hyp_irq_enable(void)
-{
-	struct shared_page *s = current->sp;
-	unsigned long irq = _context->regs.regs[0];
-
-	if (irq) {
-		//debinfo("Enabling %08lx\n", irq);
-		s->v_irq_enabled |= irq;
-	} else
-		s->v_cpsr &= ~dis_irqs;
-	//debinfo("SET CPSR to %08lx\n", s->v_cpsr);
-	if (s->v_cpsr == 0x12)
-		while(1);
-
-	if (s->v_cpsr & dis_irqs)
-		return 0;
-
-	irq = s->v_irq_enabled & ~s->v_irq_mask;
-	if (irq)
-		send_irq(current, irq);
-	//debinfo("back with cpsr: %08lx\n", s->v_cpsr);
-	//debinfo("back with pc  : %08lx\n", _context->sregs.pc);
-	//debinfo("back with sp  : %08lx\n", _context->sregs.sp);
-	if (s->v_cpsr == 0x12) {
-		debinfo("STOP\n");
-		while(1);
-	}
-	return 0;
-}
-
-int hyp_irq_disable(void)
-{
-	struct shared_page *s = current->sp;
-	int irq = _context->regs.regs[0];
-
-	switch (irq) {
-	case 0:
-		s->v_cpsr |= dis_irqs;
-		break;
-	default:
-		s->v_irq_enabled &= ~irq;
-		break;
-	}
-	if (s->v_cpsr == 0xd3)
-		return 0;
-	debirq("SET CPSR to %08lx\n", s->v_cpsr);
-	//if (s->v_cpsr == 0xd2)
-		//debug_level = DEB_ALL;
-	if (s->v_cpsr == 0x12) {
-		debpanic("unprotected IRQ\n");
-		while(1);
-	}
-	return 0;
-}
-
+/** @fn int hyp_cpuctrl(void)
+ * @brief report priviledged registers to the domain
+ *
+ * @detailed
+ * The priviledged register reported depends on the
+ * R0 value:
+ * - 0: CR0 is returned in R0
+ * - 1: CR1 is returned in R0
+ *
+ * @bug this should go to the arch directory
+ */
 int hyp_cpuctrl(void)
 {
 	unsigned long cp;
+	unsigned long retval;
 
 	deb_printf(DEB_CALL, "BEGIN\n");
 	cp = (int) _context->regs.regs[0];
 	switch (cp) {
 	case 0:
-		_context->regs.regs[0] = _get_c0();
+		retval = _get_c0();
 		break;
 	case 1:
-		_context->regs.regs[0] = _get_c1();
+		retval = _get_c1();
 		break;
 	case 2:
 		break;
 	}
-	deb_printf(DEB_HYP, "END: 0x%08x\n", _context->regs.regs[0]);
-	return 1;
+	deb_printf(DEB_HYP, "END: 0x%08x\n", retval);
+	return retval;
 }
 
+/** @fn int hyp_set_domain(void)
+ * @brief set the domain rights
+ *
+ * @detailed
+ * This is may be used by the domain to change
+ * the access right after having modified the pseudo
+ * page tables of the partition
+ */
 int hyp_set_domain(void)
 {
 	deb_printf(DEB_HYP, "current->rights: %08lx \n", current->rights);
@@ -464,6 +479,9 @@ int hyp_set_domain(void)
 	return 0;
 }
 
+/** @fn int hyp_exit(void)
+ * @brief This hypercalls aloow a domain to terminate itself
+ */
 int hyp_exit(void)
 {
 	deb_printf(DEB_CALL, "BEGIN\n");
@@ -473,7 +491,15 @@ int hyp_exit(void)
 	return 0;
 }
 
-
+/** @fn unsigned long hyp_dmesg(struct event *dst, int nb)
+ * @brief copy the ring buffer to a different buffer
+ * @param dst the event buffer to store the events
+ * @nb count of events to dump
+ * @return the count of events dumped
+ *
+ * @detailed this is used by the console tools to 
+ * retrive the hypervisor logs
+ */
 unsigned long hyp_dmesg(struct event *dst, int nb)
 {
 	struct event event;
@@ -487,6 +513,23 @@ unsigned long hyp_dmesg(struct event *dst, int nb)
 	return n;
 }
 
+/** @fn int hyp_hyp(void)
+ * @brief miscalenous hypercalls for the console driver
+ *
+ * @detailed
+ *	- R0 hold the command
+ *	- R1 depends on the command, mostly a count
+ *	- R2 depends on the command, mostly a pointer
+ *
+ * The following commands are available:
+ *   - HYPCMD_DMESG to dump the hypervisor log
+ *   - HYPCMD_EVENTS to dump the events log
+ *   - HYPCMD_GET_PLAN to retrieve the ARINC plan
+ *   - HYPCMD_SET_PLAN to set the ARINC plan
+ *   - HYPCMD_DOM_GET to dump a domain control data
+ *   - HYPCMD_DOM_STOP to stop a domain
+ *   - HYPCMD_DOM_RESTART to restart a domain
+ */
 int hyp_hyp(void)
 {
 	unsigned long n;
@@ -499,11 +542,9 @@ int hyp_hyp(void)
 	switch(cmd) {
 	case HYPCMD_DMESG:
 		n= hyp_dmesg((void *)virt_to_phys(current, _context->regs.regs[2]), n);
-		_context->regs.regs[0] = n;
 		return n;
 	case HYPCMD_EVENTS:
 		show_hypercall_count();
-		_context->regs.regs[0] = 1;
 		return 1;
 #ifdef CONFIG_SCHED_ARINC
 	case HYPCMD_GET_PLAN:
@@ -512,7 +553,6 @@ int hyp_hyp(void)
 			fp = (struct major_frame *)virt_to_phys(current, _context->regs.regs[2]);
 			memcpy(fp, major, sizeof(*fp));
 		}
-		_context->regs.regs[0] = 1;
 		return 1;
 	case HYPCMD_SET_PLAN:
 		{
@@ -520,23 +560,20 @@ int hyp_hyp(void)
 			fp = (struct major_frame *)virt_to_phys(current, _context->regs.regs[2]);
 			memcpy(major, fp, sizeof(*fp));
 		}
-		_context->regs.regs[0] = 1;
 		return 1;
 #endif
 	}
 
 	if (n > nb_usr_domains || n == 0) {
-		_context->regs.regs[0] = 0;
 		return 0;
 	}
 
-	_context->regs.regs[0] = 1;
 	switch(cmd) {
 	case HYPCMD_DOM_GET:
 		d = (struct domain *) virt_to_phys(current, _context->regs.regs[2]);
-		domain_table[n].v_irq_pending = domain_table[n].sp->v_irq_pending;
-		domain_table[n].v_irq_mask = domain_table[n].sp->v_irq_mask;
-		domain_table[n].v_irq_enabled = domain_table[n].sp->v_irq_enabled;
+		domain_table[n].d_irq_pending = domain_table[n].sp->v_irq_pending;
+		domain_table[n].d_irq_mask = domain_table[n].sp->v_irq_mask;
+		domain_table[n].d_irq_enabled = domain_table[n].sp->v_irq_enabled;
 		memcpy(d, &domain_table[n], sizeof(*d));
 		return 1;
 	case HYPCMD_DOM_STOP:
@@ -562,6 +599,7 @@ int hyp_hyp(void)
 			break;
 	 	case DSTATE_STOP:
 	 	case DSTATE_NONE:
+	 	case DSTATE_RUN:
 			//debinfo("was stopped : %d %d\n", DSTATE_READY, DSTATE_STOP);
 			d->state = DSTATE_READY;
 			break;
@@ -573,11 +611,19 @@ int hyp_hyp(void)
 			sched->add(d);
 		return 1;
 	default:
-		_context->regs.regs[0] = 0;
 		return 0;
 	}
 }
 
+/** @fn int hyp_event_send(void)
+ * @brief Send an event from domain to domain
+ *
+ * @detailed
+ * This hypercalls allows to send a event stored
+ * in a unsigned long to a specific domain.
+ *   - R0: the domain to send the event to
+ *   - R1: the event to be sent
+ */
 int hyp_event_send(void)
 {
 	struct shared_page *s;
@@ -595,10 +641,27 @@ int hyp_event_send(void)
 	return 0;
 }
 
+/** @fn int hyp_get_timer(void)
+ * @brief returns the timer value in register 0
+ */
 int hyp_get_timer(void)
 {
 	debinfo("\n");
-	_context->regs.regs[0] = timer_get();
-	return 0;
+	return timer_get();
 }
 
+int hyp_get_tls(void)
+{
+	debpanic("Unimplemented\n");
+	while(1);
+}
+int hyp_cmpxchg(void)
+{
+	debpanic("Unimplemented\n");
+	while(1);
+}
+int hyp_cmpxchg64(void)
+{
+	debpanic("Unimplemented\n");
+	while(1);
+}

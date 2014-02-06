@@ -20,6 +20,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
+/** @file domain.c
+ * @brief Domain setup and management
+ *
+ * @detailed
+ * This file includes the setup routines and the mode change
+ * routines for the domain management.
+ */
 
 #include <xhyp/config.h>
 #include <xhyp/mmu.h>
@@ -39,38 +46,87 @@
 #include <sys/io.h>
 #include <sys/ports.h>
 
+struct context *_context = (struct context *) 0x7000;
+
 #define DEBUG_STACK
 #undef DEBUG_STACK
 
 extern void show_it(void);
 
 
+/** @fn void show_ctx(struct context *ctx)
+ *
+ * @brief Print the context on the console
+ *
+ * @detailed
+ * The function prints 24 unsigned long from the context on screen
+ *
+ * @param ctx is a pointer to the context
+ */
 void show_ctx(struct context *ctx)
 {
 	int index;
 	unsigned long *p;
 
-	for (index = 0, p = (unsigned long *)ctx; index < 24; index++, p++) {
-		printk("%08x ", *p);
-		if ( index % 8 == 7 ) printk("\n");
+	debctx("mode: %08lx old_mode: %08lx\n", current->mode, current->old_mode);
+
+	for (index = 0, p = (unsigned long *)ctx; index < 16; index++, p++) {
+		printk("R%02d %08x\n", index, *p);
+		//if ( index % 8 == 7 ) printk("\n");
 	}
 
-/*
-	deb_printf(DEB_CTX, "sp  	%08x\n", ctx->sregs.sp);
-	deb_printf(DEB_CTX, "lr  	%08x\n", ctx->sregs.lr);
-	deb_printf(DEB_CTX, "pc  	%08x\n", ctx->sregs.pc);
-	deb_printf(DEB_CTX, "spsr	%08x\n", ctx->sregs.spsr);
-	deb_printf(DEB_CTX, "cpsr	%08x\n", ctx->cpsr);
-	deb_printf(DEB_CTX, "far 	%08x\n", ctx->far);
-	deb_printf(DEB_CTX, "dfsr	%08x\n", ctx->dfsr);
-	deb_printf(DEB_CTX, "ifsr	%08x\n", ctx->ifsr);
-	deb_printf(DEB_CTX, "domain	%08x\n", ctx->domain);
-	p = (unsigned *) current->tbl_l1;
+
+	debctx("sp  	%08x\n", ctx->sregs.sp);
+	debctx("lr  	%08x\n", ctx->sregs.lr);
+	debctx("pc  	%08x\n", ctx->sregs.pc);
+	debctx("spsr	%08x\n", ctx->sregs.spsr);	// debug
+	debctx("cpsr	%08x\n", ctx->cpsr);
+	debctx("far 	%08x\n", ctx->far);
+	debctx("dfsr	%08x\n", ctx->dfsr);
+	debctx("ifsr	%08x\n", ctx->ifsr);
+	debctx("domain	%08x\n", ctx->domain);
+	p = (unsigned long *) current->tbl_l1;
 	for (index = 0; index < 4; index++)
-		deb_printf(DEB_CTX, "%08x\n", *p++);
-*/
+		debctx("%08x\n", *p++);
+
 }
 
+/** @fn unsigned long *show_mmu_entry(struct domain *d, unsigned long address)
+ * @brief A debug function to show the MMU entry
+ * associated with a physical address
+ *
+ * @param d is the domain to search the MMU entries for
+ * @param address is the physical address
+ * @return a pointer to the MMU entry
+ */
+unsigned long *show_mmu_entry(struct domain *d, unsigned long address)
+{
+	unsigned long *ptr = (unsigned long *)d->tbl_l1;
+	unsigned long entry;
+
+	entry = ptr[pmd_idx(address)];
+	printk("%08lx d[%d] L1[%03x] : %08lx\n", address, d->id, pmd_idx(address), entry);
+	if (pmd_type(entry) == PTE_COARSE) {
+		ptr = d->tbl_l2;
+		entry = ptr[pte_idx(address)];
+		printk("%08lx d[%d] L2[%03x] : %08lx\n", address, d->id, pte_idx(address), entry);
+		entry = (entry & (PAGE_MASK)) | (address & ~PAGE_MASK);
+	} else {
+		entry = (entry & (SECTION_MASK)) | (address & ~SECTION_MASK);
+	}
+	return (unsigned long *) entry;
+}
+
+/** @fn void update_page_table(struct domain *d)
+ * @brief Updates the page table for the domain
+ * @param d is the pointer to the domain
+ *
+ * The page table is holding informations on the physical
+ * memory used by the hypervisor.
+ * - the type of page
+ * - the identity of the domain owning the page
+ * @sa struct page
+ */
 void update_page_table(struct domain *d)
 {
 	unsigned long borne;
@@ -90,77 +146,72 @@ void update_page_table(struct domain *d)
 	}
 }
 
-unsigned long *show_mmu_entry(struct domain *d, unsigned long address)
-{
-	unsigned long *ptr = (unsigned long *)d->tbl_l1;
-	unsigned long entry;
-
-	entry = ptr[pmd_idx(address)];
-	printk("%08lx d[%d] L1[%03x] : %08lx\n", address, d->id, pmd_idx(address), entry);
-	if (pmd_type(entry) == PTE_COARSE) {
-		ptr = d->tbl_l2;
-		entry = ptr[pte_idx(address)];
-		printk("%08lx d[%d] L2[%03x] : %08lx\n", address, d->id, pte_idx(address), entry);
-		entry = (entry & (PAGE_MASK)) | (address & ~PAGE_MASK);
-	} else {
-		entry = (entry & (SECTION_MASK)) | (address & ~SECTION_MASK);
-	}
-	return (unsigned long *) entry;
-}
-
+/** @fn void create_map(struct domain *d, unsigned long flags)
+ * @brief Create the first mapping of a domain
+ * @param d is the domain to work on
+ * @param flags defines the type of mapping
+ */
 void create_map(struct domain *d, unsigned long flags)
 {
 	int i, j;
-	unsigned long borne = addr_to_sec(xhyp->size);
+	unsigned long borne;
 	unsigned long *p = (unsigned long *) d->tbl_l1;
-	unsigned long *q;
+	unsigned long *q = (unsigned long *) d->tbl_l2;
 
-	/* First 1M is used by XHYP		*/
-
-	q = d->tbl_l2;
-	*p++ = (unsigned long )q | PTE_BITS|PTE_COARSE;
-	debpte("[%d] p: %08lx : %08lx\n", d->id, p, *p);
-	for (i = 0; i < 0x008; i++, q++) {
-		*q = (i << 12) | 0xAA2 ;
-		debpte("[%d] q: %08lx : %08lx\n", d->id, q, *q);
+	debpte("Domain[%d] type %d base %08lx size %08lx offset %08lx\n",
+			d->id, d->type, d->base_addr, d->size, d->offset);
+	/** First First level entry points to the beginning of 2nd level table */
+	*p = (unsigned long )q | PTE_BITS|PTE_COARSE;
+	debpte("%08lx.......: %08lx\n", p, *p);
+	p++;
+	/** First 7 pages are used by XHYP and are read-only	*/
+	for (i = 0; i < 0x007; i++, q++) {
+		*q = (i << 12)|PTE_AP_RW_RO|PTE_SMALL ;
+		debpte(".... q: %08lx : %08lx\n", q, *q);
 	}
+	/** The 8th page hold context information, is RW	*/
+	*q = (i << 12)|PTE_AP_RW_RW|PTE_SMALL ;
+	debpte("[%d] q: %08lx : %08lx\n", d->id, q, *q);
+	q++;
+
+	/** The second mega up to XHYP size are page tables and belong to XHYP */
+	borne = addr_to_sec(xhyp->size);
 	p = (unsigned long *) d->tbl_l1;
 	p++;
-	//*p++ = 0x812;
-	q = (unsigned long *)d->tbl_l1;
-	debpte("%08lx.......: %08lx\n", q, *q);
 	for (i = 1; i < borne; i++, p++) {
 		page_table[i].type = PTABLE_TYPE_HYP;
 		*p = map_hyp(i);
-		//*p = 0;
+		debpte("%08lx.......: %08lx\n", p, *p);
 	}
-	/* Map the memory of the guest		*/
+	/** Memory above XHYP size belong to guest		*/
 	borne += d->size >> SECTION_SHIFT;
 	for (j = 0 ; i < borne ; i++, j++, p++) {
 		*p = map_usr(d, j);
+		debpte("%08lx.......: %08lx\n", p, *p);
 		page_table[i].type = PTABLE_TYPE_USR;
 		page_table[i].domain = d->id;
 	}
 
-	/* Memory above GUEST is forbiden	*/
+	/** Memory above GUEST is forbiden	*/
 	borne = NB_SECTIONS_ENTRIES;
 	for ( ; i < borne; i++, p++)
 		*p = 0;
 
-	/* For some guests we map an offset to memory */
+	/** For GPOS guests we map an offset to memory for logical maping */
 	if (d->type == DTYPE_GPOS) {
 		p = (unsigned long *) d->tbl_l1 + d->offset + addr_to_sec(xhyp->size);
 		for (j = 0 ; j < d->size >> SECTION_SHIFT ; j++, p++) {
 			*p = map_usr(d, j);
 		}
 	}
+	/** For DRV guest we map the devices	*/
 	if (d->type == DTYPE_DRV) {
 		j = addr_to_sec(d->device);
 		i = (d->device + d->device_size) >> SECTION_SHIFT;
 		p = (unsigned long *) d->tbl_l1 + j;
 		for ( ; j < i ; j++, p++) {
 			*p = map_drv(d, j);
-			//deb_printf(DEB_INFO, "j: %08lx *p: %08lx\n", j, *p);
+			debpte("%08lx.......: %08lx\n", p, *p);
 		}
 	}
 }
@@ -170,6 +221,10 @@ void sp_update(struct shared_page * sp)
 	sp->jiffies = jiffies;
 }
 
+/** @fn void driver_init(struct domain *d)
+ * @brief Initialise the queing ports of a driver
+ * @param d is the driver's domain
+ */
 void driver_init(struct domain *d)
 {
 	struct shared_page *s = d->sp;
@@ -183,6 +238,17 @@ void driver_init(struct domain *d)
 	}
 }
 
+/** @fn void shared_page_init(struct domain *d)
+ * @brief Initialise the shared page of a domain
+ * @param d is the domain
+ *
+ * @detailed
+ * Each domain as its own shared page.
+ * The shared page holds informations to communicate
+ * between the hypervisor and the domain.
+ *
+ * @sa struct shared_page
+ */
 void shared_page_init(struct domain *d)
 {
 	struct shared_page *s = d->sp;
@@ -197,16 +263,18 @@ void shared_page_init(struct domain *d)
 	s->v_cpsr = m_svc | dis_irqs;
 }
 
-/*
- * function: setup_domain
- * retval  : 0
- * purpose :
- * 	initialize the domain structure for all guest
- * 	having a state by
- * 		- set mode as USR
- * 		- init registers
- * 		- setup MMU with flat translation
- *	 	- add the domain to scheduler
+/** @fn int setup_domains(void)
+ * @brief initialise all domains
+ *
+ * @return 0 in case of success the error number otherwise
+ *
+ * @detailed
+ * initialize the domain structure for all guest
+ * having a existing state and for each domain
+ * 	- set the mode as USR
+ * 	- initiase registers
+ * 	- setup MMU with flat translation
+ * 	- add the domain to scheduler
  */
 int setup_domains(void)
 {
@@ -232,6 +300,8 @@ int setup_domains(void)
 		/* point to guest context	*/
 		ctx = &d->ctx;
 		/* Initialize the guest registers	*/
+		d->ctx_level = 1;	/* We start with a restore */
+		d->no_check = 1;	/* Do not check first restore */
 		ctx->sregs.pc = d->start_addr;
 		/* Create page table mapping	*/
 		create_map(d, 0);
@@ -248,7 +318,7 @@ int setup_domains(void)
 		ctx->sregs.lr = 0;
 		ctx->sregs.sp = 0;
 		/* Initialize spsr to user mode */
-		ctx->sregs.spsr = m_usr;
+		ctx->sregs.spsr = m_usr; // first init
 
 		/* Clear standard registers	*/
 		for (j = 0; j < 13; j++)
@@ -261,7 +331,7 @@ int setup_domains(void)
 		ctx->regs.regs[1] = 0x00000f34;
 		ctx->regs.regs[2] = phys_to_virt(d, init_tags(d));
 
-		ctx->cpsr = mode_init;
+		d->d_cpsr = mode_init;
 		/* Initialize the domain's list	*/
 		list_init(&d->list);
 		/* Add this domain to the scheduler	*/
@@ -279,24 +349,55 @@ int setup_domains(void)
 }
 
 
+/** @fn void mode_save(struct domain *d, int mode)
+ * @brief Setup the shared page context from domain context
+ * depending on the mode
+ *
+ * @param d is the domain to save
+ * @param mode is the mode
+ *
+ * @detailed
+ * The mode is one of:
+ *  - DMODE_SVC
+ *  - DMODE_IRQ
+ *  - DMODE_USR
+ *  - DMODE_ABT
+ *  - DMODE_UND
+ *
+ *  The domain structure has a context holding scheduling
+ *  informations for the scheduled domain.
+ *  The shared_page structure has a context for each mode
+ *  and the OS in the partition can use this information
+ *  to retrieve the saved context on mode change, like on interrupt.
+ *
+ *  The struct domain has an element d_cpsr holding the virtual
+ *  processor status. On mode_save, the shared_page v_cpsr is
+ *  set to the value saved in d_cpsr.
+ */
 void mode_save(struct domain *d, int mode)
 {
 	struct shared_page *s = d->sp;
 
-	//debinfo("save [%d] mode %x\n", d->id, mode);
-	//debinfo("[%d] PC %08lx SP %08lx LR %08lx PSR %08lx\n", d->id, d->ctx.sregs.pc, d->ctx.sregs.sp, d->ctx.sregs.lr, d->ctx.sregs.spsr);
-	//show_ctx(&d->ctx);
-	//debinfo("VCPSR: %08lx\n", s->v_cpsr);
+        if (d == current && !d->ctx_level) {
+                /* Setup context for next slice         */
+                debctx("CTX\n");
+                context_save();
+        }
+
+	if (d->id != 4) debmode("s->v_cpsr: %08lx\n", s->v_cpsr);
+	d->d_cpsr = s->v_cpsr;
 	switch (mode) {
 	case DMODE_IRQ:
 		s->context_irq = d->ctx;
+		if (d->id != 4) debmode("save IRQ ctx: PC: %08lx\n", d->ctx.sregs.pc);
 		break;
 	case DMODE_SVC:
 		s->context_sys = d->ctx;
-		d->v_cpsr = s->v_cpsr;
+		if (d->id != 4) debmode("save SVC ctx: PC: %08lx\n", d->ctx.sregs.pc);
 		break;
 	case DMODE_USR:
 		s->context_usr = d->ctx;
+		if (d->id != 4) debmode("save USR ctx: PC: %08lx\n", d->ctx.sregs.pc);
 		break;
 	case DMODE_ABT:
 		s->context_abt = d->ctx;
@@ -311,23 +412,50 @@ void mode_save(struct domain *d, int mode)
 	}
 }
 
+/** @fn void mode_set(struct domain *d, int mode)
+ * @brief Setup the domain context from shared_page context
+ * depending on the mode
+ *
+ * @param d is the domain to save
+ * @param mode is the mode
+ *
+ * @detailed
+ * The mode is one of:
+ *  - DMODE_SVC
+ *  - DMODE_IRQ
+ *  - DMODE_USR
+ *  - DMODE_ABT
+ *  - DMODE_UND
+ *
+ *  The domain structure has a context holding scheduling
+ *  informations for the scheduled domain.
+ *  The shared_page structure has a context for each mode
+ *  and the OS in the partition can set this information
+ *  to modify saved context on mode change, like on interrupt.
+ *
+ *  The struct domain has an element d_cpsr holding the virtual
+ *  processor status. On mode_save, the domain d_cpsr is
+ *  set to the value saved in struct shared_page v_cpsr.
+ */
 void mode_set(struct domain *d, int mode)
 {
 	struct shared_page *s = d->sp;
 
+	d->old_mode = d->mode;
 	d->mode = mode;
-	//debinfo("set [%d] mode %x\n", d->id, mode);
+	if (d->id != 4) debmode("set [%d] old %d mode %x\n", d->id, d->old_mode, mode);
 	switch (mode) {
 	case DMODE_IRQ:
 		d->ctx.sregs = s->context_irq.sregs;
-		s->v_cpsr = m_irq|dis_irqs;
+		s->v_cpsr = (m_irq|dis_irqs);
+		if (d->id != 4) debmode("set IRQ ctx: PC: %08lx\n", d->ctx.sregs.pc);
 		break;
 	case DMODE_ABT:
 		d->ctx.sregs = s->context_abt.sregs;
 		if (d->old_mode == DMODE_SVC)
 			d->ctx.sregs.sp = s->context_sys.sregs.sp;
 		else {
-			debinfo("[%d] old mode %x\n", d->id, d->old_mode);
+			//debctx("[%d] old mode %x\n", d->id, d->old_mode);
 			//d->ctx.sregs.sp = s->context_usr.sregs.sp;
 	//C'est Linux qui doit faire cela pas toi !!!!!
 			//while(1);
@@ -337,28 +465,48 @@ void mode_set(struct domain *d, int mode)
 		break;
 	case DMODE_USR:
 		d->ctx = s->context_usr;
+		if (d->id != 4) debmode("set USR ctx: PC: %08lx\n", d->ctx.sregs.pc);
 		s->v_cpsr = m_usr;
 		break;
 	case DMODE_SVC:
 		d->ctx = s->context_sys;
-		s->v_cpsr = (m_svc|d->v_cpsr);
+		if (d->id != 4) debmode("set SVC ctx: PC: %08lx\n", d->ctx.sregs.pc);
+		s->v_cpsr = (m_svc|d->d_cpsr);
+		break;
+	case DMODE_SYSCALL:
+		d->ctx.sregs = d->ctx_syscall.sregs;	/* Only special registers are updated */
+		d->mode = DMODE_SVC;
+		s->v_cpsr = (m_svc|dis_irqs);
 		break;
 	default:
 		debpanic("Should not append, mode %d\n", mode);
 		while(1);
 		break;
 	}
-	d->ctx.sregs.spsr &= 0xff;
-	d->ctx.sregs.spsr |= 0x10;
-	//debinfo("[%d] PC %08lx SP %08lx LR %08lx PSR %08lx\n", d->id, d->ctx.sregs.pc, d->ctx.sregs.sp, d->ctx.sregs.lr, d->ctx.sregs.spsr);
-	//debinfo("VCPSR: %08lx\n", s->v_cpsr);
-	//show_ctx(&d->ctx);
-	sched->need_resched++;
+	if (d->id != 4) debmode("[%d] PC %08lx SP %08lx LR %08lx PSR %08lx\n", d->id, d->ctx.sregs.pc, d->ctx.sregs.sp, d->ctx.sregs.lr, d->ctx.sregs.spsr);
+	d->ctx.sregs.spsr &= ~mask_domain;
+	d->ctx.sregs.spsr |= mode_domain;
+	d->d_sum = context_sum(&d->ctx);
+	d->flags &= ~DFLAGS_HYPCALL;
+	debctx("ID %d set to %d\n", d->id, mode);
+	debctx("sched->need_resched %d\n", sched->need_resched);
 }
 
+/** @fn void mode_new(struct domain *d, int mode)
+ * @brief The function is called on changing mode to
+ * save the old context and set a new one.
+ *
+ * @param d is the domain
+ * @param mode is the new mode
+ *
+ * @detailed
+ * The old mode of the domain is set to the actual mode of the domain.
+ * The mode of the domain is set to the value of the mode parameter.
+ */
 void mode_new(struct domain *d, int mode)
 {
+	debmode("[%d] old %d new %d\n", d->id, d->old_mode, mode);
 	mode_save(d, d->mode);
-	d->old_mode = d->mode;
 	mode_set(d, mode);
 }
+

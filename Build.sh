@@ -1,6 +1,5 @@
 #!/bin/ksh
 
-
 BASE=$(pwd)
 export INCLUDE=${BASE}/include
 
@@ -39,13 +38,23 @@ function clean_all
 	do
 		print cleaning ${dir}
 		( cd ${dir} ; ./Build.sh clean )
+		print "done"
 	done
 	print "cleaning objects"
 	rm -rf generated
 	rm -f os/*.dom
 	rm -f xhyp xhyp.bin xhyp.ld xhyp.nm
-	rm -f files.in cscope.out
+	rm -f files.in
 	rm -f objs/*
+	rm -f cscope.out cscope.files
+	print "done"
+}
+
+function mrproper
+{
+	clean_all
+	rm -f .config
+	rm -rf doc
 	rm -f include/autoconf.h
 }
 
@@ -113,15 +122,23 @@ function build_cscope
 	cscope -I ./include -k -b -i files.in
 }
 
+function build_doc
+{
+	mkdir -p doc
+	doxygen && ( cd doc/latex &&  make )
+	exit $?
+}
+
 [[ $1 == "help" ]] && help && exit 0
 [[ $1 == "cscope" ]] && build_cscope && exit 0
 [[ $1 == "scripts" ]] && build_scripts && exit 0
 [[ $1 == "menuconfig" ]] && build_config && exit 0
 [[ $1 == "menu" ]] && build_config && exit 0
 [[ $1 == "config" ]] && build_config && exit 0
-[[ $1 == "mrproper" ]] && rm -f .config cscope.out cscope.files && clean_all && exit 0
+[[ $1 == "mrproper" ]] && mrproper && exit 0
 [[ $1 == "clean" ]] && clean_all && exit 0
 [[ $1 == "save" ]] && save_all && exit 0
+[[ $1 == "doc" ]] && build_doc && exit 0
 
 [[ -r .config ]] || {
 	print "Please configure using ./Build.sh config"

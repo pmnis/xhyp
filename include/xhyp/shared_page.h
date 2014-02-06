@@ -38,6 +38,7 @@ struct shared_page {
 	struct context	context_und;
 	struct context	context_abt;
 	struct context	context_sys;
+	struct context	context_svc;
 	struct context	context_irq;
 	unsigned long	jiffies;
 	unsigned long	irq;
@@ -46,8 +47,10 @@ struct shared_page {
 	unsigned long 	v_spsr;
 	unsigned long 	v_irq_enabled;
 	unsigned long 	v_irq_pending;
+	unsigned long 	v_irq_cached;
 	unsigned long 	v_irq_ack;
 	unsigned long 	v_irq_mask;
+	unsigned long	reserved[10];
 	unsigned long	sampling_port;
 	struct queuing_port	qp[NB_QUEUING_PORT];
 	unsigned long	end_magic;

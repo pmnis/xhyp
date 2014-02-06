@@ -8,6 +8,7 @@
 
 /* We need to know the position of the segments defined in the LDS	*/
 
+
 /* Here we start				*/
 .globl _start
 _start:
@@ -30,10 +31,6 @@ _fiq:		.word	_exp_fiq
 
 	.align 8
 
-.globl	_context
-_context:	.word	_saved_regs
-.globl	_saved_regs
-_saved_regs:	.space	0x100, 0
 
 .globl	_hyp_ttb
 _hyp_ttb:	.word	0
@@ -59,7 +56,7 @@ _dom_rights:	.word	0
 	msr	cpsr, r0
 	.endm
 	.macro save_frame
-	ldr	sp, _context
+	mov	sp, #0x7000
         stm	sp, {r0 - r12}		@ save all registers
         add     sp, sp, #60		@ update pointer
         mrs     r3, cpsr                @ get CPSR
@@ -78,7 +75,7 @@ _dom_rights:	.word	0
 	
 	go_svc
 
-	ldr	sp, _context
+	mov	sp, #0x7000
         add     sp, sp, #52		@ update pointer
         stm	sp, {r1 , r2}           @ and save shadow sp/lr
 
@@ -122,7 +119,7 @@ _dom_rights:	.word	0
 	mcr	p15, 0, r0, c7, c5, 4	@ Prefetch flush
 	mov	r0, r0
 
-	ldr	sp, _context
+	mov	sp, #0x7000
         ldr     r0, [sp, #64]           @ retrieve spsr
         ldr     r1, [sp, #56]           @ retrieve usr_lr
         ldr     r2, [sp, #52]           @ retrieve usr_sp
@@ -142,6 +139,8 @@ _dom_rights:	.word	0
 	nop
         .endm
 
+h1:
+	b	h1
 _exp_irq:
 	subs	lr, lr, #4		@ adjust the return address
 	sys_enter
@@ -161,12 +160,14 @@ _exp_swi:
 _switch_to:
 	sys_leave
 
+h3: b	h3
 _exp_undefined:
 	sys_enter
 	bl	exp_undefined		@ r1: saved registers
 	@ we only return if we emulate the undefined instruction
 	sys_leave
 
+h4: b	h4
 _exp_prefetch:
 	subs	lr, lr, #4		@ adjust the return address
 	sys_enter
@@ -175,6 +176,7 @@ _exp_prefetch:
 	@ we only return if we have an error in a domain
 	sys_leave
 
+h5: b	h5
 _exp_data_abrt:
 	subs	lr, lr, #8		@ adjust the return address
 	sys_enter
@@ -448,6 +450,7 @@ _cpu_it_disable:
 	orr	r0,r0,#dis_irq	@ disable IRQs
 	msr	cpsr,r0
 	mov	pc, lr
+
 # Wait for interrupt in V5TE
 .globl _wfi
 _wfi:
@@ -458,3 +461,4 @@ _wfi:
 	mov	r0, #0
         mcr     p15, 0, r0, c7, c0, 4           @ Wait for interrupt
 	b	_wfi
+

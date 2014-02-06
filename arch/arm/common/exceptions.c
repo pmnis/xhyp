@@ -33,12 +33,19 @@
 void exp_undefined(void)
 {
 	struct shared_page *s = current->sp;
+	unsigned long *ptr;
+	unsigned long instr = _context->sregs.pc;
 
+	ptr = (unsigned long *) dom_virt_to_hyp(current, instr);
+	ptr--;
+	debpanic("UNDEF INSTR instr %08lx at %08lx cpsr %08lx\n", *ptr, ptr,  _context->cpsr);
 	if (!current->id)
 		panic(_context, "Cannot recover from Undef Instr");
 	debpanic("Undefined instruction at %08lx\n", _context->sregs.pc);
 	debpanic("Called from............. %08lx\n", _context->sregs.lr);
-	debpanic("CPSR.................... %08lx\n", s->v_cpsr);
+	debpanic("SPSR.................... %08lx\n", _context->sregs.spsr);
+	debpanic("REAL CPSR............... %08lx\n", _context->cpsr);
+	debpanic("Virtual CPSR............ %08lx\n", s->v_cpsr);
 	debpanic("Stopping domain %d\n", current->id);
 	debpanic("Irqs on domain %d: E:%08lx M:%08lx A:%08lx\n", current->id, s->v_irq_enabled, s->v_irq_mask, s->v_irq_ack);
 
@@ -68,25 +75,31 @@ void show_irqs(void)
 		printk("domain %d sp: %p v_irq_enabled %08lx v_irq_mask %08lx v_irq_pending %08lx\n", d->id, s, s->v_irq_enabled, s->v_irq_mask, s->v_irq_pending);
 	}
 }
+
 void exp_irq(void)
 {
 	debirq("\n");
 	event_new(EVT_IRQ);
-	current->ctx = *_context;
 
 	debirq("switch from %08lx\n", _context->sregs.pc);
 	do_irq();
 
-	if (sched->need_resched)
-		schedule();
 
+	debirq("sched->need_resched: %d\n", sched->need_resched);
+	if (sched->need_resched) {
+		schedule();
+	}
+
+	event_new(EVT_IRQOUT);
+	debctx("\n");
 	debirq("switch to %08lx\n", _context->sregs.pc);
-        context_verify(_context);
+        context_verify();
         switch_to();
 }
 
 void exp_fiq(void)
 {
+	event_new(EVT_FIQ);
 	panic(NULL, "Unimplemented");
 }
 
@@ -96,20 +109,25 @@ void exp_data_abrt(void)
 	unsigned long far;
 	unsigned long dfsr;
 
-	current->ctx = *_context;
+	debctx("\n");
+	//context_save();
 
 	event_new(EVT_ABT);
 
-	mode_save(current, current->mode);
+	//mode_save(current, current->mode);
         dfsr = _get_dfsr();
         far = _get_far();
 
 	do_abort(far, dfsr);
 
+	if (current->ctx_level) {
+		debpanic("current->ctx_level: %d\n", current->ctx_level);
+		while(1);
+	}
 	schedule();
 
-        context_verify(_context);
-        switch_to();
+	debpanic("Never reached\n");
+	while(1);
 }
 
 void exp_prefetch(void)
@@ -119,19 +137,24 @@ void exp_prefetch(void)
 
 	debabt("PC at %08lx\n", _context->sregs.pc);
 
-	current->ctx = *_context;
+	debctx("\n");
+	//context_save();
 	event_new(EVT_ABT);
 
-	mode_save(current, current->mode);
+	//mode_save(current, current->mode);
         dfsr = 5;	/* Say it is a page fault */
         far = _context->sregs.pc;
 
 	do_abort(far, dfsr);
 
+	if (current->ctx_level) {
+		debpanic("current->ctx_level: %d\n", current->ctx_level);
+		while(1);
+	}
 	schedule();
 
-        context_verify(_context);
-        switch_to();
+	debpanic("Never reached\n");
+	while(1);
 }
 
 unsigned long exp_swi(unsigned long *instr)
@@ -147,12 +170,12 @@ unsigned long exp_swi(unsigned long *instr)
 
 	/* fake undefined expression because Qemu seems to bug */
 	if ((_context->cpsr & 0x1F) == 0x1B) {
-		debhyp("FAKED UNDEF SWI %d : %l\n", callnr, _context->cpsr);
+		debpanic("FAKED UNDEF SWI %d : instr %08lx cpsr %08lx\n", callnr, *ptr,  _context->cpsr);
 		exp_undefined();
 	}
 
-	current->ctx = *_context;
-	if (callnr > 1 ) debhyp("callnr: %d\n", callnr);
+	current->flags |= DFLAGS_HYPCALL;
+	debhyp("callnr: %d\n", callnr);
 
 	current->hypercall = callnr;
 	event_new(EVT_SYSIN);
@@ -168,15 +191,16 @@ unsigned long exp_swi(unsigned long *instr)
 		retval = -1;
 		while(1);
 	}
-	//debhyp("resched(%d) call[%d] returning to %08lx\n", sched->need_resched, callnr, _context->sregs.pc);
-	event_new(EVT_SYSOUT);
-	//if (current->id == 1 && callnr != 1) debinfo("call[%d] returning to %08lx\n", callnr, _context->sregs.pc);
 
-	if (sched->need_resched)
+	if (sched->need_resched) {
+		debctx("sched->need_resched: %d\n", sched->need_resched);
 		schedule();
-	//if (current->id == 1 && callnr != 1) debinfo("NO schedule\n");
+	}
+
+	event_new(EVT_SYSOUT);
+	current->ctx.regs.regs[0] = retval;
 	_context->regs.regs[0] = retval;
-	//debhyp("resched(%d) call[%d] returning to %08lx\n", sched->need_resched, callnr, _context->sregs.pc);
+	current->flags &= ~DFLAGS_HYPCALL;
 	switch_to();
 
 	return retval;

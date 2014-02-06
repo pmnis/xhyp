@@ -31,8 +31,10 @@
 #include <xhyp/errno.h>
 #include <xhyp/vpages.h>
 
-/*
+/** @file mmu.c
+ * @brief MMU handling, mapping functions
  *
+ * @detailed
  * Mapping functions
  * - Purpose
  *   build sections PGD entries for XHYP
@@ -46,16 +48,33 @@
  * map_usr_ro(d, idx) USR RO PGD entry, RTOS, for domain d for the index
  * map_drv(d, idx) DRV RW PGD entry, RTOS or GPOS, for domain d for the index
  */
+
+/** @fn pgd_t map_hyp(unsigned long idx)
+ * @brief setup a section entry for the hypervisor text and code
+ * @param idx is the index of the level 1 table
+ * @return the computed page table entry
+ */
 pgd_t map_hyp(unsigned long idx)
 {
 	return PTE_SECTION | SEC_RW_RO | (idx << SECTION_SHIFT & 0xfff00000) | PTE_BITS;
 }
 
+/** @fn pgd_t map_io(unsigned long idx)
+ * @brief setup a section entry for the hypervisor IO
+ * @param idx is the index of the level 1 table
+ * @return the computed page table entry
+ */
 pgd_t map_io(unsigned long idx)
 {
 	return PTE_SECTION | SEC_RW_RO | (idx << SECTION_SHIFT & 0xfff00000) | PTE_BITS;
 }
 
+/** @fn pgd_t map_usr(struct domain *d, unsigned long idx)
+ * @brief setup a section entry for a domain
+ * @param d is the domain to handle
+ * @param idx is the index of the level 1 table of this domain
+ * @return the computed page table entry
+ */
 pgd_t map_usr(struct domain *d, unsigned long idx)
 {
 	unsigned long a = d->base_addr;
@@ -68,6 +87,12 @@ pgd_t map_usr(struct domain *d, unsigned long idx)
 		return a | PTE_SECTION | SEC_RW_RW | ((d->id) << 5) | PTE_BITS;
 }
 
+/** @fn pgd_t map_drv(struct domain *d, unsigned long idx)
+ * @brief setup a section entry for a driver
+ * @param d is the domain to handle
+ * @param idx is the index of the level 1 table of this domain
+ * @return the computed page table entry
+ */
 pgd_t map_drv(struct domain *d, unsigned long idx)
 {
 	unsigned long a;
@@ -77,6 +102,12 @@ pgd_t map_drv(struct domain *d, unsigned long idx)
 	return a | PTE_SECTION | SEC_RW_RW | ((d->id) << 5) | PTE_BITS;
 }
 
+/** @fn pgd_t map_usr_ro(struct domain *d, unsigned long idx)
+ * @brief setup a read only section entry for a domain
+ * @param d is the domain to handle
+ * @param idx is the index of the level 1 table of this domain
+ * @return the computed page table entry
+ */
 pgd_t map_usr_ro(struct domain *d, unsigned long idx)
 {
 	unsigned long a = d->base_addr;
@@ -86,6 +117,12 @@ pgd_t map_usr_ro(struct domain *d, unsigned long idx)
 	return a | PTE_SECTION | SEC_RW_RO | PTE_BITS;
 }
 
+/** @fn unsigned long pmd_val(struct domain *d, unsigned long address)
+ * @brief get the PMD index associated to a virtual address
+ * @param d is the domain to handle
+ * @param address is the virtual address to use
+ * @return the index in the PMD
+ */
 unsigned long pmd_val(struct domain *d, unsigned long address)
 {
 	unsigned long entry;
@@ -151,33 +188,36 @@ void new_pgd_at(unsigned long *pgd)
 	unsigned long i;
 
 	debinfo("pgd %08lx\n", pgd);
-	current->v_pgd = (unsigned long) pgd;
+	current->sp->v_pgd = (unsigned long) pgd;
 	pgd = (unsigned long *) virt_to_phys(current, (unsigned long)pgd);
 	debinfo("pgd %08lx\n", pgd);
+
 	p = pgd;
 	q = (unsigned long *) current->tbl_l1;
 
 	p++; q++;	/* First entry is XHYP: do not change	*/
 	for(i = 1; i < NB_PMD_ENTRIES; i++, q++, p++) {
 		*q = 0;
-		//debinfo("p[%02d]: %08lx\n", i, *p);
-		if (! (*p & VSEC_VALID_BIT))
+		if (! (*p & VSEC_VALID_BIT)) {
+			if (*p) debinfo("pmd[%03x] %08lx: %08lx\n", i, p, *p);
 			continue;
+		}
 		if (*p & VSEC_TYPE_BIT) {
 			*q = vsec_to_sec(*p);
 			if (!pmd_in_domain(q)) {
 				*q = 0;
 			} else {
-				deb_printf(DEB_INFO, "pmd[%02x] %08lx: %08lx\n", i, *p, *q);
+				deb_printf(DEB_INFO, "pmd[%03x] %08lx: %08lx\n", i, *p, *q);
 			}
 		} else {
-			deb_printf(DEB_INFO, "COARSE[%02x] %08lx: %08lx\n", i, p, *p);
+			deb_printf(DEB_INFO, "COARSE[%03x] %08lx: %08lx\n", i, p, *p);
 			*q = vpmd_to_pmd(*p, i);
-			deb_printf(DEB_INFO, "COARSE[%02x] %08lx: %08lx\n", i, q, *q);
+			deb_printf(DEB_INFO, "PTE   [%02x] %08lx: %08lx\n", i, q, *q);
 			new_pmd_at(*p, i);
 		}
-		debinfo("q[%02d]: %08lx\n", i, *q);
+		//debinfo("q[%02d]: %08lx\n", i, *q);
 	}
+//while(1);
 	return;
 }
 
@@ -261,6 +301,7 @@ int hyp_set_pmd(void)
 	return 0;
 }
 
+
 int hyp_set_pte(void)
 {
 	unsigned long pgd;
@@ -276,39 +317,38 @@ int hyp_set_pte(void)
 	pte = _context->regs.regs[3];
 
 
-	deb_printf(DEB_INFO, "pgd: %08lx address %08lx pte: %08lx is %08lx\n", pgd, address, ptr, pte);
+	debinfo("pgd: %08lx address %08lx pte: %08lx is %08lx\n", pgd, address, ptr, pte);
 
-	if (pgd != current->v_pgd) {
-		debinfo("v_pgd: %08lx != %08lx \n", current->v_pgd, pgd);
+	if (pgd != current->sp->v_pgd) {
+		debinfo("v_pgd: %08lx != %08lx \n", current->sp->v_pgd, pgd);
 		return 0;
 	}
 
 
 	i1 = (address >> 20) & 0xfff;
 	i2 = (address >> 12) & 0xff;
-	//debinfo("i1: %08lx\n", i1);
-	//debinfo("i2: %08lx\n", i2);
+	debinfo("i1: %08lx\n", i1);
+	debinfo("i2: %08lx\n", i2);
 	
 	q = &current->tbl_l2[i1 * NB_PTE_ENTRIES];
 	q += i2;
 	//debinfo("dst: %p\n", q);
 	if ((pte & VPTE_VALID_BIT)) {
-		//deb_printf(DEB_INFO, "PTE[%02x] %08lx\n", i2, pte);
+		debinfo("PTE[%02x] %08lx\n", i2, pte);
 		*q = vpte_to_pte(pte);
-		//deb_printf(DEB_INFO, "PTE[%02x] %08lx: %08lx\n", i2, q, *q);
+		debinfo("PTE[%02x] %08lx: %08lx\n", i2, q, *q);
 	} else {
 		debinfo("invalid PTE %08lx set to 0\n", pte);
 		*q = 0;
-		while(1);
+		if (pte) while(1);
 	}
-	
+
 	show_ventry((unsigned long *)current->tbl_l1, address);
 
 	switch_to();
 
 	return 0;
 }
-
 
 int hyp_probe(void)
 {

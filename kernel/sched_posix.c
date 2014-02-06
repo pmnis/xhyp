@@ -28,6 +28,7 @@
 #include <xhyp/irq.h>
 
 static struct runqueue runqueue;
+struct list sleep_queue;
 
 /*
  * Initialization function for the scheduler
@@ -37,17 +38,36 @@ static void sched_init(void)
 {
 	int i;
 
-#ifdef CONFIG_ARINC
-	scheduler.type = SCHED_ARINC;
-#endif
 	/* Initialize runqueue          */
 	for (i = 0; i < 32; i++)
 		list_init(&runqueue.list[i]);
 	runqueue.bitmap = 0;
+	list_init(&sleep_queue);
+}
+
+/* These are called from interrupt context
+ * static void sched_add_to_sleepq(struct domain *d)
+ * static void sched_add_from_sleepq(struct domain *d)
+ */
+
+static void sched_add_to_sleepq(struct domain *d)
+{
+	d->state = DSTATE_SLEEP;
+	list_add_tail(&d->list, &sleep_queue);
+}
+
+static void sched_add_from_sleepq(struct domain *d)
+{
+	d->state = DSTATE_READY;
+	list_del(&d->list);
+	list_init(&d->list);
+	list_add_tail(&d->list, &runqueue.list[d->prio]);
+	runqueue.bitmap |= 0x01 << d->prio ;
 }
 
 static void sched_add(struct domain *d)
 {
+	d->state = DSTATE_READY;
 	debsched("adding %d\n", d->id);
 	list_add_tail(&d->list, &runqueue.list[d->prio]);
 	runqueue.bitmap |= 0x01 << d->prio ;
@@ -56,12 +76,15 @@ static void sched_add(struct domain *d)
 
 static void sched_delete(struct domain *d)
 {
+	d->state = DSTATE_DEAD;
 	debsched("delete %d\n", d->id);
 	list_del(&d->list);
 	list_init(&d->list);
 	if (list_empty(&runqueue.list[d->prio])) {
 		runqueue.bitmap &= ~(0x01 << d->prio );
 	}
+	if (d == current)
+		context_save();
 }
 
 static inline void print_state (struct domain *d)
@@ -83,68 +106,88 @@ static inline void print_state (struct domain *d)
 	printk("\n");
 }
 
+static void sched_show_d(void)
+{
+	struct domain *d1, *d2;
+
+	d1 = (struct domain *)(runqueue.list[8].next);
+	d2 = (struct domain *)(runqueue.list[8].next->next);
+	debsched("first %d next %d\n", d1->id, d2->id);
+}
+
+#ifdef CONFIG_SCHED_POLICY_RR
 static void sched_put(struct domain *d)
 {
-	debsched("put %d\n", d->id);
-	list_del(&d->list);
-	list_init(&d->list);
-	list_add_tail(&d->list, &runqueue.list[d->prio]);
+	if (!d->id)	/* do not touch idle	*/
+		return;
+	debsched("d->allocated_slices: %d\n", d->allocated_slices);
+	if (d->allocated_slices > 0 )
+		return;
+	d->allocated_slices = d->budget;
+	sched_delete(d);
+	sched_add(d);
 }
+#else
+static void sched_put(struct domain *d)
+{
+	debsched("d->id %d\n", d->id);
+	sched_show_d();
+}
+#endif
 
 static int sched_get(void)
 {
 	int i;
+	struct domain *d;
 
 	current = idle_domain;
+	//context_trace(&domain_table[4].ctx);
 	for (i=0; i< 32; i++) {
 		if (runqueue.bitmap & (0x01 << i)) {
 			if (list_empty(&runqueue.list[i]))
 				continue;
 			current = (struct domain *)(runqueue.list[i].next);
+			d = (struct domain *)(runqueue.list[i].next->next);
+			debsched("first %d next %d\n", current->id, d->id);
 			if (!(current->state && DSTATE_RMASK)) {
 				debpanic("Bad state in scheduler: %08lx\n", current->state);
 				current = idle_domain;
 				continue;
 			}
-			debsched("bitmap: %08lx got %d rest %d\n", runqueue.bitmap, current->id, current->allocated_slices);
 			break;
 		}
 	}
-	debsched("id %d state: %d\n", current->id, current->state);
 	return current->id;
 }
 
 static void sched_sleep(struct domain *d)
 {
-	d->state = DSTATE_SLEEP;
+	if (d->id > 0 ) debsched("\n");
 	sched_delete(d);
-	d->ctx = *_context;
-	//if (d->id > 0 ) debinfo("\n");
-	//if (d->id > 0 ) show_ctx(&d->ctx);
+	sched_add_to_sleepq(d);
 	schedule();
 }
 
 static void sched_kill(struct domain *d)
 {
-	debinfo("killing %d\n", d->id);
-	d->state = DSTATE_DEAD;
+	if (d->id > 0 ) debsched("\n");
 	sched_delete(d);
-	d->ctx = *_context;
 	schedule();
 }
 
 static void sched_stop(struct domain *d)
 {
-	d->state = DSTATE_STOP;
+	if (d->id > 0 ) debsched("\n");
 	sched_delete(d);
-	d->ctx = *_context;
+	d->state = DSTATE_STOP;
 	schedule();
 }
 
 static void sched_yield(void)
 {
+	if (current->id > 0 ) debsched("\n");
+	debsched("\n");
 	sched_delete(current);
-	current->ctx = *_context;
 	sched_add(current);
 	current->state = DSTATE_READY;
 	schedule();
@@ -152,46 +195,54 @@ static void sched_yield(void)
 
 static void sched_wakeup(struct domain *d)
 {
-/*
-	if (d->id == 1) {
-		debsched("d[1]: state %08lx mode %08lx\n", d->state, d->mode);
-		if (d->mode == DMODE_IRQ) {
-			debpanic("STOP\n");
-			while (1);
-		}
+	struct shared_page *s;
+
+	debsched("id: %d\n", d->id);
+	sched_show_d();
+	switch (d->mode) {
+	case DMODE_SVC:
+	case DMODE_USR:
+		s = d->sp;
+		debsched("E %08lx P %08lx M %08lx\n", s->v_irq_enabled, s->v_irq_pending, s->v_irq_mask);
+		if (s->v_irq_enabled & s->v_irq_pending & ~s->v_irq_mask)
+			mode_new(d, DMODE_IRQ);
+	default:
+		break;
 	}
-*/
 	d->state = DSTATE_RUN;
-	*_context = d->ctx;
-	debsched("PC %08lx SP %08lx LR %08lx PSR %08lx\n",
-		_context->sregs.pc, _context->sregs.sp, _context->sregs.lr, _context->sregs.spsr);
-	switch_to();
+	debsched("id: %d\n", d->id);
+	sched_show_d();
 }
 
 static void sched_dom(struct domain *d)
 {
 	if (d->state != DSTATE_READY)
 		return;
-	d->allocated_slices = 1; //d->budget;
-	debsched("------allocated slices: %d\n", current->allocated_slices);
+	d->allocated_slices = 1;
+	d->budget = 1;
+	debsched("------allocated slices: %d\n", d->allocated_slices);
 	sched_add(d);
 }
 /*
  * Simple time slice handling
  */
+#ifdef CONFIG_SCHED_POLICY_RR
 static void sched_slice(void)
 {
 	if (!current->id) return;
 	current->slices++;
-	current->allocated_slices -= 1;
-	debsched("------allocated slices: %d\n", current->allocated_slices);
+	current->allocated_slices--;
 	if (current->allocated_slices > 0)
 		return;
-	current->allocated_slices = current->budget;
-	debsched("------New budget      : %d\n", current->budget);
-	sched_put(current);
-	sched->need_resched = 1;
+	sched->need_resched++;
 }
+#else
+static void sched_slice(void)
+{
+	current->slices++;
+	return;
+}
+#endif
 
 static struct xhyp_scheduler sched_posix = {
 	.need_resched = 0,
@@ -210,6 +261,8 @@ static struct xhyp_scheduler sched_posix = {
 	.kill = sched_kill,
 	.slice = sched_slice,
 	.init = sched_init,
+	.add_to_sleep = sched_add_to_sleepq,
+	.add_from_sleep = sched_add_from_sleepq,
 };
 
 struct xhyp_scheduler *sched = &sched_posix;

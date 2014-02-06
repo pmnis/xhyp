@@ -32,6 +32,7 @@ struct ring {
 };
 
 extern unsigned int ring_get(struct ring *f, void *p, unsigned int cnt);
+extern unsigned int ring_get_entry(struct ring *f, void *p, unsigned int size, unsigned int num);
 extern unsigned int ring_put(struct ring *f, void *p, unsigned int cnt);
 extern struct ring trace_ring;
 

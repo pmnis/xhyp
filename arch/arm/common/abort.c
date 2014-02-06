@@ -93,7 +93,7 @@ int analyse_fault(unsigned long fsr, unsigned long far)
 }
 /*
  */
-int abt_count = 95;
+int abt_count = 20;
 
 void do_abort(unsigned long far, unsigned long dfsr)
 {
@@ -108,11 +108,12 @@ void do_abort(unsigned long far, unsigned long dfsr)
 		panic(NULL, "Unimplemented");
 	}
 
-
+/*
 if (abt_count-- <= 0) {
 		debabt("STOP\n");
 		while(1);
 	}
+*/
 	/* if no abort handler kill the domain		*/
 	if (! s->context_abt.sregs.pc) {
 		debpanic("Data abort but no abort handler\n");
@@ -125,6 +126,9 @@ if (abt_count-- <= 0) {
 		p = (unsigned long *)current->tbl_l1;
 		debpanic("desc..: %08lx\n", p[(far >> 20)]);
 		debpanic("rights: %08lx\n", current->rights);
+		if (_context->sregs.pc < XHYP_MEM_SIZE) {
+			panic(NULL, "Data abort in kernel");
+		}
 		sched->kill(current);
 	}
 

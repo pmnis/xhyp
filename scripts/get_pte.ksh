@@ -34,9 +34,9 @@ ap=$(( (pte & 0x00000ff0) >> 4))
 type=$(( pte & 0x03 ))
 
 printf "type	:	%x\n" $type
-printf "address	:	%x\n" $section
+printf "pfn 	:	%05x\n" $section
 #printf "domain	:	%x\n" $domain
-printf "ap	:	%x	%s\n" $ap
+printf "ap	:	%02x	%s\n" $ap
 #get_ap $ap
 #exit
 printf "ap	:	%x	%s\n" $ap $(get_ap $ap)

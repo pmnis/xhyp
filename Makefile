@@ -1,6 +1,6 @@
 
 
-all:
+all: clean
 	./Build.sh
 
 menuconfig:
@@ -15,6 +15,6 @@ cscope:
 clean:
 	./Build.sh clean
 
-mrproper: clean
-	rm .config
+mrproper:
+	./Build.sh mrproper
 

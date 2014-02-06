@@ -26,7 +26,8 @@ _start:
 	bl	start_kernel
 	bl	_hyp_exit
 
-
+_hang:
+	b _hang
 	.space 1024
 _stack_top:
 	.word	__stack_end__

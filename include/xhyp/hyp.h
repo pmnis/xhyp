@@ -76,8 +76,11 @@
 #define _HYP_hyp			51
 #define _HYP_abt_return			52
 #define _HYP_usr_return			53
+#define _HYP_get_tls			54
+#define _HYP_cmpxchg			55
+#define _HYP_cmpxchg64			56
 
-#define _HYP_CALLS			54
+#define _HYP_CALLS			57
 
 #ifndef __ASSEMBLY__
 
@@ -137,6 +140,9 @@ extern int hyp_preempt_disable(void);
 extern int hyp_preempt_enable(void);
 extern int hyp_hyp(void);
 extern int hyp_usr_return(void);
+extern int hyp_get_tls(void);
+extern int hyp_cmpxchg(void);
+extern int hyp_cmpxchg64(void);
 
 #define HYPCMD_DOM_GET	0
 #define HYPCMD_DOM_STOP	1
@@ -150,4 +156,6 @@ extern call_entry_t    hypercall_table[_HYP_CALLS];
 extern int hypercall_count[_HYP_CALLS];
 
 extern void panic(struct context *, char *);
+extern void hyp_mode_set(unsigned long mode);
+
 #endif

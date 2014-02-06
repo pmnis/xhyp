@@ -35,12 +35,17 @@ static inline unsigned long dom_to_hyp(unsigned long p)
 		return p;
 	return p + current->base_addr - XHYP_MEM_SIZE;
 }
+
+
 static inline unsigned long virt_to_phys(struct domain *d, unsigned long p)
 {
 	if (p < XHYP_MEM_SIZE)
 		return p;
 	return p + d->base_addr - XHYP_MEM_SIZE - (d->offset << SECTION_SHIFT);
+	//return p + d->base_addr - XHYP_MEM_SIZE;
 }
+
+#define virt_to_phys_cur(p)	virt_to_phys(current, p)
 static inline unsigned long dom_virt_to_hyp(struct domain *d, unsigned long address)
 {
 	unsigned long *ptr = (unsigned long *)d->tbl_l1;
@@ -68,6 +73,7 @@ extern unsigned long pmd_real_domain(unsigned long);
 
 static inline unsigned long vpte_to_pte(unsigned long vpte)
 {
+	//unsigned long pte = virt_to_phys_cur(VPTE_ADDR_MASK & vpte);
 	unsigned long pte = dom_to_hyp(VPTE_ADDR_MASK & vpte);
 
 	pte |= PTE_BITS;
@@ -117,6 +123,17 @@ static inline unsigned long vpgd_to_pgd(unsigned long vpgd)
 	return pgd;
 }
 
+/* NEW INTERFACE SHOULD REPLACE ABOVE	*/
+
+static inline unsigned long mk_real_pmd(unsigned long vpmd)
+{
+	unsigned long pmd;
+
+	pmd = PTE_COARSE;
+	pmd |= pmd_real_domain((vpmd & VPMD_DOMAIN_MASK) >> VPMD_DOMAIN_SHIFT);
+
+	return pmd;
+}
 
 #endif /* __ASSEMBLY__ */
 #endif

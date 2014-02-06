@@ -30,7 +30,7 @@ struct event {
 	int nr;
 	int id;
 	int event;
-	int syscall;
+	int hypercall;
 	int state;
 	int c_mode;
 	int o_mode;
@@ -52,11 +52,13 @@ struct event {
 #define EVT_ABTOUT	11
 #define EVT_ABTRET	12
 #define EVT_WFI		13
-#define EVT_NB		14
+#define EVT_FIQ		14
+#define EVT_NB		15
 
 extern int event_new(int event);
 extern void event_dump(void);
 extern void event_init(void);
+extern void event_dump_last(int cnt);
 
 typedef void (*evt_hook_t)(struct event *);
 

@@ -50,7 +50,12 @@ struct context {
 
 extern struct context *_context;
 extern void show_ctx(struct context *);
-extern int context_verify(struct context *);
+extern int context_verify(void);
+extern void context_save(void);
+extern void context_restore(void);
+extern void context_trace(struct context *);
+extern unsigned long context_sum(struct context *ctx);
+
 
 #define CTX_retval	_context->regs.regs[0]
 #define CTX_arg0	_context->regs.regs[0]

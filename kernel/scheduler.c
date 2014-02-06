@@ -28,6 +28,92 @@
 #include <xhyp/irq.h>
 
 /*
+ * Context manipulation
+ */
+
+unsigned long context_sum(struct context *ctx)
+{
+	int i;
+	unsigned long sum;
+	unsigned long *p;
+
+	p = (unsigned long *)ctx;
+	for (i = 0, sum = 0 ; i < 17; i++, p++)
+		sum += *p;
+
+	return sum;
+}
+
+void context_trace(struct context *ctx)
+{
+	debctx("Context sum: %08lx ------- R0 %08lx\n", context_sum(ctx), ctx->regs.regs[0]);
+}
+
+/** @fn int context_verify()
+ * @brief insure that the context is in non priviledge mode
+ */
+int context_verify(void)
+{
+	/* force SPSR to user mode      */
+	_context->sregs.spsr &= ~mask_domain;
+	_context->sregs.spsr |= mode_domain;
+	return 0;
+}
+
+/** @fn int context_save()
+ * @brief save context in domain
+ */
+void context_save(void)
+{
+	debctx("flags %x current->ctx_level: %d\n", current->flags, current->ctx_level);
+	if (current->ctx_level++) {
+		debpanic("current->ctx_level: %d\n", current->ctx_level);
+		event_dump_last(20);
+		while(1);
+	}
+	current->ctx = *_context;
+
+	current->d_sum = context_sum(_context);
+
+	//debctx("______________________________saved sum %08lx\n", current->d_sum);
+	//debctx("SPSR.................... %08lx\n", _context->sregs.spsr);
+}
+
+/** @fn int context_restore()
+ * @brief save context in domain
+ */
+void context_restore(void)
+{
+	unsigned long sum;
+
+	debctx("flags %x current->ctx_level: %d\n", current->flags, current->ctx_level);
+	if (--current->ctx_level) {
+		debpanic("current->ctx_level: %d\n", current->ctx_level);
+		while(1);
+	}
+
+	*_context = current->ctx;
+
+	if (current->no_check) {
+		current->no_check = 0;
+		return;
+	}
+
+	sum = context_sum(_context);
+
+	if (current->d_sum != sum) {
+		unsigned long *p;
+		int i;
+		debpanic("BAD sum: %08lx saved sum %08lx\n", sum, current->d_sum);
+		debpanic("SPSR.................... %08lx\n", _context->sregs.spsr);
+		for (i=0, p = (unsigned long *)_context; i < 17; i++, p++)
+			debpanic("R[%02d]: %08lx\n", i, *p);
+		while(1);
+	}
+	//debctx("______________________________ sum %08lx\n", sum);
+}
+
+/*
  * SYSTEM CALLS
  */
 
@@ -37,9 +123,9 @@
  */
 int hyp_idle(void)
 {
-	debsched("SP at.....: %08lx\n", _context->sregs.sp);
-	debsched("LR at.....: %08lx\n", _context->sregs.lr);
-	debsched("PC at.....: %08lx\n", _context->sregs.pc);
+	//debsched("SP at.....: %08lx\n", _context->sregs.sp);
+	//debsched("LR at.....: %08lx\n", _context->sregs.lr);
+	//debsched("PC at.....: %08lx\n", _context->sregs.pc);
 	sched->sleep(current);
 	return 0;
 }
@@ -81,22 +167,38 @@ int hyp_preempt_enable(void)
 
 void schedule(void)
 {
-	debsched("\n");
-	if (current->id) event_new(EVT_SCHEDOUT);
+	debsched("schedout\n");
+	//if (current->id)
+	event_new(EVT_SCHEDOUT);
 
+	/* throw away last domain to get a new one	*/
+	if (sched->put)
+		sched->put(current);
+
+	/* Be sure to have a saved context for USER domains	*/
+	if (current->id && !current->ctx_level)
+		context_save();
 	/* Choose the new current domain 		*/
 	/* Wait for interrupt if no domain found	*/
-	while (!sched->get())
+	while (!sched->get()) {
+		current = idle_domain;
+		debsched("\n");
 		wfi();
+	}
 
 	debsched("current: %d\n", current->id);
 
-	/* now we got the new current we wont schedule for a while */
+	/* Reset our need to schedule		*/
 	sched->need_resched = 0;
 
 	/* Wakeup current domain	*/
 	event_new(EVT_SCHEDIN);
-	debsched("wakeup at %08lx\n", current->ctx.sregs.pc);
-	sched->wake(current);
+	//debsched("wakeup at %08lx\n", current->ctx.sregs.pc);
+	/* The specific scheduler will take care on interrupt processing */
+	if (sched->wake)
+		sched->wake(current);
+	//context_trace(&current->ctx);
+	context_restore();
+	switch_to();
 }
 

@@ -15,9 +15,9 @@ struct shared_page *xhyp_sp = (struct shared_page *) (0x02000000);
 #define LSTACK_SIZE     1024
 static unsigned long abt_stack[LSTACK_SIZE];
 
-void pgfault_handler(void *addr, unsigned long flags)
+void pgfault_handler(void *addr, unsigned long flags, unsigned long fsr)
 {
-	printk("page fault at 0x%08x reason: 0x%08x\n", addr, flags);
+	printk("page fault at 0x%08x flags 0x%08lx fsr 0x%08x\n", addr, flags, fsr);
 	_hyp_exit(1);
 }
 

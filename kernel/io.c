@@ -34,6 +34,17 @@
 
 #include <sys/io.h>
 
+/** @file io.c
+ * @brief implementation of queuing ports and standard IO
+ */
+
+/** @fn int queuing_port_create(int id, void *buf, unsigned int flags)
+ * @brief creation of a queuing port
+ * @param id the domain id to create the queuing ports to
+ * @param buf a pointer to a buffer for the queuing_port data
+ * @param flags to specify the way the queuing port is created
+ * @return the qport id in case of success or a negative integer to indicate an error
+ */
 int queuing_port_create(int id, void *buf, unsigned int flags)
 {
 	int i;
@@ -69,6 +80,16 @@ int queuing_port_create(int id, void *buf, unsigned int flags)
 extern int queuing_port_send(int, void *, unsigned int);
 extern int queuing_port_recv(int, void *, unsigned int);
 
+/** @fn int hyp_io_open(void)
+ * @brief standard IO open hypercall
+ * @return the port id
+ *
+ * @detailed
+ *   - R0 is the qport id to open
+ *   - R1 are the open flags
+ *
+ *
+ */
 int hyp_io_open(void)
 {
 	unsigned long id;
@@ -81,7 +102,7 @@ int hyp_io_open(void)
 	flags = CTX_arg1;
 
 	for (i = 0, d = domain_table; i < nb_domains; i++, d++) {
-		if (d->type == DTYPE_DRV && d->drv_type == id)
+		if (d->type == DTYPE_DRV && d->d_drv_type == id)
 			break;
 	}
 	if (i >= nb_domains)
@@ -122,8 +143,11 @@ int stdio_write(unsigned long fd, unsigned long buf, unsigned long cnt)
 
 	qp = &console_qp[port];
 	ptr = (char *)virt_to_phys(current, buf);
-	if (!paddr_in_domain(current, (unsigned long) ptr))
-		panic(NULL, "stdio_write Bad addr in r1\n");
+	if (!paddr_in_domain(current, (unsigned long) ptr)) {
+		debpanic("stdio_write Bad addr in r1: %08lx convert to %08lx\n", buf, ptr);
+debpanic("d->base_addr %08lx XHYP_MEM_SIZE %08lx (d->offset << SECTION_SHIFT) %08lx\n", current->base_addr, XHYP_MEM_SIZE, (current->offset << SECTION_SHIFT));
+		while(1);
+	}
 	cnt = fifo_put(&qp->fifo, (char *)ptr, cnt);
 	return 0;
 
@@ -225,7 +249,7 @@ void console_init(void)
 	int i;
 
 	for (i = 0, d = domain_table; i < nb_domains; i++, d++) {
-		if (d->type == DTYPE_DRV && d->drv_type == HYP_IO_CONSOLE_ID)
+		if (d->type == DTYPE_DRV && d->d_drv_type == HYP_IO_CONSOLE_ID)
 			break;
 	}
 

@@ -43,6 +43,7 @@
 #define DEB_TLB		0x00010000
 #define DEB_TAGS	0x00020000
 #define DEB_ALLOC	0x00040000
+#define DEB_MODE	0x00080000
 #define DEB_DEBUG	0x10000000
 #define DEB_ALL		0xffffffff
 #define DEB_F1		DEB_PANIC|DEB_CALL|DEB_IRQ|DEB_FAULT|DEB_SCHED
@@ -58,11 +59,22 @@ extern void dump_pgd(unsigned long *p);
 	if (lvl & debug_level) { \
 	time_update(); \
 	if (!current) current = &domain_table[0]; \
-        printk("%03d.%06d [%d/%d]-(%s-%d)-%s: " format , \
-	xtime.tv_sec, xtime.tv_usec, \
-	current->id, current->mode, \
-	 __FILE__, __LINE__,  __func__, ## arg); \
+        	printk("%03d.%06d [%d/%d/%d]-(%s-%d)-%s: " format , \
+		xtime.tv_sec, xtime.tv_usec, \
+		current->id, current->mode, current->old_mode,\
+	 	__FILE__, __LINE__,  __func__, ## arg); \
 	}} while (0)
+#elif DEBUG2
+#define deb_printf(lvl, format, arg...) do { \
+	if (lvl & debug_level) { \
+	time_update(); \
+	if (!current) current = &domain_table[0]; \
+	if ((current->id != 0) && (current->id != 4)) { \
+        	printk("%03d.%06d [%d/%d]-(%s-%d)-%s: " format , \
+		xtime.tv_sec, xtime.tv_usec, \
+		current->id, current->mode, \
+	 	__FILE__, __LINE__,  __func__, ## arg); \
+	}}} while (0)
 #else
 #define deb_printf(lvl, format, arg...) do {} while (0)
 #endif
@@ -78,8 +90,13 @@ extern void dump_pgd(unsigned long *p);
 #define debtlb(format, arg...) deb_printf(DEB_TLB, format, ## arg)
 #define debcache(format, arg...) deb_printf(DEB_CACHE, format, ## arg)
 #define debdeb(format, arg...) deb_printf(DEB_DEBUG, format, ## arg)
+#define debmode(format, arg...) deb_printf(DEB_MODE, format, ## arg)
+#define debctx(format, arg...) deb_printf(DEB_CTX, format, ## arg)
 
 extern int PANIC;
+
+#define COLOR_BLACK     "[30m"
+#define COLOR   "[3"
 
 #endif
 

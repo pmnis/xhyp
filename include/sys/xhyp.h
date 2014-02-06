@@ -29,11 +29,12 @@ extern void _hyp_console(volatile char *, int);
 extern void _hyp_exit(int);
 extern void _hyp_syscall(int);
 extern void _hyp_syscall_request(void(*)(unsigned long), unsigned long *);
-extern void _hyp_pgfault_request(void(*)(void *, unsigned long), unsigned long *);
+extern void _hyp_pgfault_request(void(*)(void *, unsigned long, unsigned long), unsigned long *);
 extern void _hyp_undef_request(void(*)(void *), unsigned long *);
 extern void _hyp_syscall_return(unsigned long);
 extern void _hyp_irq_request(void(*)(unsigned long), unsigned long *);
 extern void _hyp_irq_enable(unsigned long);
+extern void _hyp_irq_disable(unsigned long);
 extern void _hyp_irq_return(unsigned long);
 extern void _hyp_new_pgd(unsigned long);
 
@@ -52,11 +53,13 @@ static inline int IRQ_mask(int mask)
 static inline void IRQ_enable(void)
 {
 	xhyp_sp->v_cpsr &= ~dis_irqs;
+	//while(1);
 }
 
 static inline void IRQ_disable(void)
 {
 	xhyp_sp->v_cpsr |= dis_irqs;
+	//while(1);
 }
 
 
