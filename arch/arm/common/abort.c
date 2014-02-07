@@ -30,6 +30,7 @@
 #include <xhyp/debug.h>
 #include <xhyp/shared_page.h>
 #include <xhyp/mmu.h>
+#include <xhyp/event.h>
 
 
 /*
@@ -97,44 +98,50 @@ int abt_count = 20;
 
 void do_abort(unsigned long far, unsigned long dfsr)
 {
-	unsigned long *p;
 	struct shared_page *s = current->sp;
-
+/*
 	debabt("dfsr: %08lx\n", dfsr);
 	debabt("far : %08lx\n", far);
 	debabt("pc  : %08lx\n", _context->sregs.pc);
-
+	debabt("lr  : %08lx\n", _context->sregs.lr);
+	debabt("sp  : %08lx\n", _context->sregs.sp);
+	debabt("r0  : %08lx\n", _context->regs.regs[0]);
+	debabt("r1  : %08lx\n", _context->regs.regs[1]);
+	debabt("r2  : %08lx\n", _context->regs.regs[2]);
+	debabt("r3  : %08lx\n", _context->regs.regs[3]);
+	debabt("r4  : %08lx\n", _context->regs.regs[4]);
+	debabt("r5  : %08lx\n", _context->regs.regs[5]);
+	debabt("r6  : %08lx\n", _context->regs.regs[6]);
+	debabt("r7  : %08lx\n", _context->regs.regs[7]);
+*/
 	if (analyse_fault(dfsr, far)) {
 		panic(NULL, "Unimplemented");
 	}
 
-/*
-if (abt_count-- <= 0) {
-		debabt("STOP\n");
-		while(1);
-	}
-*/
+
+//if (abt_count-- <= 0) {
+		//debabt("STOP\n");
+		//while(1);
+	//}
+
 	/* if no abort handler kill the domain		*/
 	if (! s->context_abt.sregs.pc) {
-		debpanic("Data abort but no abort handler\n");
-		debpanic("sp....: %08lx\n", _context->sregs.sp);
-		debpanic("lr....: %08lx\n", _context->sregs.lr);
-		debpanic("pc....: %08lx\n", _context->sregs.pc);
-		debpanic("spsr..: %08lx\n", _context->sregs.spsr);
-		debpanic("tbl_l1: %08lx\n", current->tbl_l1);
-		debpanic("far...: %08lx\n", far);
-		p = (unsigned long *)current->tbl_l1;
-		debpanic("desc..: %08lx\n", p[(far >> 20)]);
-		debpanic("rights: %08lx\n", current->rights);
-		if (_context->sregs.pc < XHYP_MEM_SIZE) {
-			panic(NULL, "Data abort in kernel");
-		}
+		debpanic("Abort but no handler\n");
 		sched->kill(current);
 	}
 
+	if (current->old_mode == DMODE_ABT && current->mode == DMODE_ABT) {
+		debpanic("DOUBLE FAULT\n");
+		event_dump_last(20);
+		while(1);
+	}
 	/* Save old mode and set new mode to ABT	*/
+	
+	//debabt("MODE: %d OLDMODE %d\n", current->mode, current->old_mode);
+	//event_dump_last(200);
+	//debabt("SYS SP: %08lx\n", current->sp->context_sys.sregs.sp);
 	mode_new(current, DMODE_ABT);
-
+	//debabt("SYS SP: %08lx\n", current->sp->context_sys.sregs.sp);
 	/* add fault address and cause		*/
 	if (current->old_mode == DMODE_SVC)
 		current->ctx.regs.regs[0] = phys_to_virt(current, (unsigned long ) &s->context_sys);
@@ -143,6 +150,8 @@ if (abt_count-- <= 0) {
 	current->ctx.regs.regs[1] = far;
 	current->ctx.regs.regs[2] = dfsr;
 
-	debabt("SP: %08lx\n", current->ctx.sregs.sp);
+	//debabt("SYS SP: %08lx\n", current->sp->context_sys.sregs.sp);
+	//debabt("SP: %08lx\n", current->ctx.sregs.sp);
+
 }
 

@@ -65,7 +65,7 @@ int timer_handler(int irq, unsigned long data)
 	timer->itclear = 0;
 	//timer->load = period;
 	timer->ctrl |= SP804_ENABLE;
-	sched->slice();		/* This is a scheduler entry	*/
+	time_tick();
 	in_timer = 0;
 	debirq("%ld %lx\n", jiffies, tval);
 	return 0;

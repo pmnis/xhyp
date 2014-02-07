@@ -212,9 +212,10 @@ int hyp_irq_return(void)
 	/* It will be reset from scratch on next interrupt		*/
 	/* But we need to say we did and increment the ctx_level	*/
 	current->ctx_level++;
-	hyp_mode_set(current->old_mode);
-	debctx("\n");
+	mode_restore(current);
+	context_restore();
 
+	switch_to();
 	return 0;
 }
 
@@ -273,9 +274,9 @@ int hyp_irq_enable(void)
 	}
 
 	if (s->v_cpsr == 0x12) { /* Should GET AWAY	*/
-		debpanic("SET CPSR to %08lx\n", s->v_cpsr);
-		show_ctx(&current->ctx);
-		exit();
+		//debpanic("SET CPSR to %08lx\n", s->v_cpsr);
+		//show_ctx(&current->ctx);
+		//exit();
 	}
 
 	if (s->v_cpsr & dis_irqs)	/* Interrupt are disabled on VCPU */
@@ -322,7 +323,6 @@ int hyp_irq_disable(void)
 
 	switch (irq) {
 	case 0:
-		//if ((s->v_cpsr & dis_irqs) != dis_irqs) debirq("%08lx\n", s->v_cpsr);
 		s->v_cpsr |= dis_irqs;
 		break;
 	default:
@@ -330,11 +330,6 @@ int hyp_irq_disable(void)
 		s->v_irq_enabled &= ~irq;
 		break;
 	}
-	//if (current->id != 4) debirq("SET s->v_cpsr to %08lx\n", s->v_cpsr);
-	//if (s->v_cpsr == 0xd3)
-		//return 0;
-	//if (s->v_cpsr == 0xd2)
-		//debug_level = DEB_ALL;
 	if (s->v_cpsr == 0x12) {
 		debpanic("unprotected IRQ\n");
 		while(1);

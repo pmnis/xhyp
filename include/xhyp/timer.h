@@ -48,5 +48,6 @@ extern unsigned long timer_get(void);
 extern struct timespec xtime;
 extern void time_update(void);
 
+extern void time_tick(void);
 
 #endif

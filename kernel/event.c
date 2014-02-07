@@ -61,7 +61,7 @@ evt_hook_t	evt_hook[EVT_NB];
 char *event_str[EVT_NB] = {
 	"start", "sched_in", "sched_out", "irq", "irq_in", "irq_out",
 	"irq_ret", "sys_in", "sys_out", "abt", "abt_in", "abt_out",
-	"abt_ret", "wfi", "fiq"
+	"abt_ret", "wfi", "fiq", "usr_ret", "sysc_ret"
 };
 
 /** @var char *hypcall_str[]
@@ -310,6 +310,8 @@ int event_new(int e)
 	event.o_mode = current->old_mode;
 	event.id = current->id;
 	event.state = current->state;
+	event.ctx = current->ctx_level;
+	event.priv = sched->need_resched;
 
 	ring_put(&trace_ring, &event, sizeof(event));
 
@@ -354,7 +356,7 @@ void event_dump_last(int cnt)
 	unsigned int i = 1;
 	char color[2];
 
-	printk("%12s %5s %2s %2s %12s %2s %12s %08s %08s\n", "timestamp", "nr", "id", "ev", "event", "callnr", "hypercall", "mode", "omode");
+	printk("%13s %6s %2s %2s %12s %2s %12s %08s %08s %3s %3s\n", "timestamp", "nr", "id", "ev", "event", "callnr", "hypercall", "mode", "omode", "ctx", "nrs");
 	while (cnt--) {
 	if (ring_get_entry(&trace_ring, &event, sizeof(event), i) < sizeof(event))
 		return;
@@ -362,12 +364,12 @@ void event_dump_last(int cnt)
 	color[0] = '0' + event.id;
 	color[1] = 0;
 	printk(COLOR "%sm", color);
-	printk("%6ld.%6ld %5d %2d %2d %12s %6d %12s %08s %08s\n",
+	printk("%6ld.%6ld %5d %2d %2d %12s %6d %12s %08s %08s %03d %03d\n",
 		event.timestamp.tv_sec, event.timestamp.tv_usec,
 		event.nr, event.id, event.event,
 		event_str[event.event], event.hypercall,
 		hypcall_str[event.hypercall],
-		mode_str[event.c_mode], mode_str[event.o_mode]);
+		mode_str[event.c_mode], mode_str[event.o_mode], event.ctx, event.priv);
 	}
 	printk(COLOR_BLACK);
 }

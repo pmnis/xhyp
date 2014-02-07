@@ -5,3 +5,4 @@ Config.OLD
 T1
 include/autoconf.h
 setpte.txt
+.config

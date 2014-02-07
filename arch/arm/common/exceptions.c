@@ -110,21 +110,25 @@ void exp_data_abrt(void)
 	unsigned long dfsr;
 
 	debctx("\n");
-	//context_save();
 
 	event_new(EVT_ABT);
 
-	//mode_save(current, current->mode);
         dfsr = _get_dfsr();
         far = _get_far();
 
-	do_abort(far, dfsr);
-
 	if (current->ctx_level) {
 		debpanic("current->ctx_level: %d\n", current->ctx_level);
+		event_dump_last(20);
 		while(1);
 	}
-	schedule();
+
+	do_abort(far, dfsr);
+
+	event_new(EVT_ABTOUT);
+
+	current->no_check = 1;	/* We do not have same registers */
+	context_restore();
+	switch_to();
 
 	debpanic("Never reached\n");
 	while(1);
@@ -147,11 +151,11 @@ void exp_prefetch(void)
 
 	do_abort(far, dfsr);
 
-	if (current->ctx_level) {
-		debpanic("current->ctx_level: %d\n", current->ctx_level);
-		while(1);
-	}
-	schedule();
+	event_new(EVT_ABTOUT);
+
+	current->no_check = 1;	/* We do not have same registers */
+	context_restore();
+	switch_to();
 
 	debpanic("Never reached\n");
 	while(1);
@@ -189,6 +193,7 @@ unsigned long exp_swi(unsigned long *instr)
 		debpanic("Bad system call: *ptr   %08lx\n", *ptr);
 		debpanic("Bad system call: callnr %08lx\n", callnr);
 		retval = -1;
+		event_dump_last(20);
 		while(1);
 	}
 

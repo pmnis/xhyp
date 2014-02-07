@@ -98,6 +98,7 @@ struct domain {
 	unsigned long	status;
 	unsigned long	mode;
 	unsigned long	old_mode;
+	unsigned long	old_mode2;
 	unsigned long	type;
 	unsigned long	flags;
 	unsigned long	tag;
@@ -234,6 +235,7 @@ static inline void switch_to(void)
 extern void mode_new(struct domain *d, int mode);
 extern void mode_save(struct domain *d, int mode);
 extern void mode_set(struct domain *d, int mode);
+extern void mode_restore(struct domain *d);
 
 #endif
 

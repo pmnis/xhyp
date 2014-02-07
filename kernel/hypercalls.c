@@ -231,7 +231,14 @@ int hyp_undef_request(void)
 int hyp_abt_return(void)
 {
 	event_new(EVT_ABTRET);
-	hyp_mode_set(current->old_mode);
+
+        current->flags &= ~DFLAGS_HYPCALL;
+
+	current->ctx_level++;	/* We restore from another mode */
+	mode_restore(current);
+
+	context_restore();
+	switch_to();
 
 	return 0;
 }
@@ -275,13 +282,10 @@ int hyp_setmode(void)
  */
 int hyp_syscall_request(void)
 {
-	struct shared_page *s = current->sp;
-
 	current->ctx_syscall.sregs.pc = _context->regs.regs[0];
 	current->ctx_syscall.sregs.sp = _context->regs.regs[1];
-	debinfo("PC: %08lx\n", s->context_sys.sregs.pc);
-	debinfo("SP: %08lx\n", s->context_sys.sregs.sp);
-
+	debinfo("PC: %08lx\n", current->ctx_syscall.sregs.pc);
+	debinfo("SP: %08lx\n", current->ctx_syscall.sregs.sp);
 
 	return 0;
 }
@@ -303,7 +307,7 @@ unsigned long last_spsr = 0;
 int hyp_syscall(void)
 {
 	unsigned long callnr;
-	struct shared_page *s = current->sp;
+	//struct shared_page *s = current->sp;
 
 	if (current->type == DTYPE_GPOS) {
 		callnr = _context->regs.regs[7];
@@ -315,17 +319,25 @@ int hyp_syscall(void)
 	last_spsr = _context->sregs.spsr;
 
 	debinfo("========= syscall %d (%x)  SPSR   0x%08lx  PC 0x%08lx=======\n", callnr, callnr, _context->sregs.spsr, _context->sregs.pc);
-	if (current->mode != DMODE_USR) panic(_context, "Wrong mode\n");
+	if (current->mode != DMODE_USR) {
+		event_dump_last(20);
+		while(1);
+		panic(_context, "Wrong mode\n");
+	}
 
 	mode_new(current, DMODE_SYSCALL);
 
-	debinfo("========= syscall %d  SPSR   0x%08lx =======\n", callnr, s->context_usr.sregs.spsr);
-
-deb_on = 1;
+	//debinfo("========= syscall %d  SPSR   0x%08lx =======\n", callnr, s->context_usr.sregs.spsr);
+	//debinfo("========= syscall %d  SP     0x%08lx =======\n", callnr, current->ctx.sregs.sp);
 
 	current->syscall++;
 
-	return callnr;
+	current->ctx.regs.regs[0] = callnr;
+	current->no_check = 1;  /* We do not have same registers */
+	context_restore();
+        switch_to();
+
+	return 0;
 }
 
 /** @fn int hyp_syscall_return(void)
@@ -342,18 +354,27 @@ int hyp_syscall_return(void)
 	unsigned long callnr = last_callnr;
 
 	retval = s->context_usr.regs.regs[0];
-	debinfo("retval: %08lx\n", retval);
+	debhyp("retval: %08lx\n", retval);
 
-	debinfo("========= syscall %d  SPSR   0x%08lx =======\n", callnr, s->context_usr.sregs.spsr);
-	hyp_mode_set(DMODE_USR);
-	debinfo("========= syscall %d  SPSR   0x%08lx =======\n", callnr, s->context_usr.sregs.spsr);
-	debinfo("========= syscall %d  SPSR   0x%08lx =======\n", last_callnr, current->ctx.sregs.spsr);
+        event_new(EVT_SYSRET);
+
+	debhyp("========= syscall %d  SPSR   0x%08lx =======\n", callnr, s->context_usr.sregs.spsr);
+	current->ctx_level++;	/* We restore from another mode */
+	mode_restore(current);
+	debhyp("========= syscall %d  SPSR   0x%08lx =======\n", callnr, s->context_usr.sregs.spsr);
+	debhyp("========= syscall %d  SPSR   0x%08lx =======\n", last_callnr, current->ctx.sregs.spsr);
 
 	spsr = current->ctx.sregs.spsr;
 
 if (spsr != last_spsr) while(1);
 
-	return retval;
+        current->flags &= ~DFLAGS_HYPCALL;
+
+        context_restore();
+        switch_to();
+
+
+	return 0;
 }
 
 /** @fn int hyp_yield(void)
@@ -420,13 +441,20 @@ int hyp_console(void)
 	return n - 1;
 }
 /** fn int hyp_usr_return(void)
- * @brief Hypercall to return to use mode
+ * @brief Hypercall to return to user mode
  * usefull to implement first user thread
  *
  */
 int hyp_usr_return(void)
 {
-	hyp_mode_set(DMODE_USR);
+        event_new(EVT_USRRET);
+        current->flags &= ~DFLAGS_HYPCALL;
+
+	current->ctx_level++;	/* We restore from another mode */
+	mode_set(current, DMODE_USR);
+
+        context_restore();
+        switch_to();
 
 	return 0;
 }

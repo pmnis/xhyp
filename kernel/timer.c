@@ -47,3 +47,12 @@ void time_update(void)
 	time_get(&xtime);
 }
 
+void time_tick(void)
+{
+	int i;
+
+	for(i = 0; i < nb_domains; i++)
+		domain_table[i].jiffies++;
+	sched->slice();
+}
+

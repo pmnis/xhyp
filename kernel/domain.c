@@ -290,6 +290,7 @@ int setup_domains(void)
 			continue;
 		/* Initialize state and mode	*/
 		d->old_mode = DMODE_INIT;
+		d->old_mode2 = -1;
 		mode_set(d, DMODE_SVC);
 		/* allocate page table	*/
 		alloc_page_tables(d);
@@ -384,20 +385,16 @@ void mode_save(struct domain *d, int mode)
                 context_save();
         }
 
-	if (d->id != 4) debmode("s->v_cpsr: %08lx\n", s->v_cpsr);
 	d->d_cpsr = s->v_cpsr;
 	switch (mode) {
 	case DMODE_IRQ:
 		s->context_irq = d->ctx;
-		if (d->id != 4) debmode("save IRQ ctx: PC: %08lx\n", d->ctx.sregs.pc);
 		break;
 	case DMODE_SVC:
 		s->context_sys = d->ctx;
-		if (d->id != 4) debmode("save SVC ctx: PC: %08lx\n", d->ctx.sregs.pc);
 		break;
 	case DMODE_USR:
 		s->context_usr = d->ctx;
-		if (d->id != 4) debmode("save USR ctx: PC: %08lx\n", d->ctx.sregs.pc);
 		break;
 	case DMODE_ABT:
 		s->context_abt = d->ctx;
@@ -411,6 +408,60 @@ void mode_save(struct domain *d, int mode)
 		break;
 	}
 }
+
+/** @fn void mode_ret(struct domain *d, int mode)
+ * @brief Setup the domain context from shared_page context
+ * depending on the mode when returning from exception
+ *
+ * @param d is the domain to save
+ * @param mode is the mode
+ *
+ * @detailed
+ * The mode is one of:
+ *  - DMODE_SVC
+ *  - DMODE_IRQ
+ *  - DMODE_USR
+ *  - DMODE_ABT
+ *  - DMODE_UND
+ *
+ *  The domain structure has a context holding scheduling
+ *  informations for the scheduled domain.
+ *  The shared_page structure has a context for each mode
+ *  and the OS in the partition can set this information
+ *  to modify saved context on mode change, like on interrupt.
+ *
+ *  The struct domain has an element d_cpsr holding the virtual
+ *  processor status. On mode_save, the domain d_cpsr is
+ *  set to the value saved in struct shared_page v_cpsr.
+ */
+void mode_restore(struct domain *d)
+{
+	struct shared_page *s = d->sp;
+	int mode;
+
+	mode = d->mode;
+	d->mode = d->old_mode;
+	d->old_mode = d->old_mode2;
+	d->old_mode2 = -1;
+	switch (d->mode) {
+	case DMODE_USR:
+		d->ctx = s->context_usr;
+		break;
+	case DMODE_SVC:
+		d->ctx = s->context_sys;
+		break;
+	default:
+		debpanic("Should not append, from mode %d to mode %d\n", mode, d->mode);
+		while(1);
+		break;
+	}
+	s->v_cpsr = s->v_spsr;
+	d->ctx.sregs.spsr &= ~mask_domain;
+	d->ctx.sregs.spsr |= mode_domain;
+	d->d_sum = context_sum(&d->ctx);
+	d->flags &= ~DFLAGS_HYPCALL;
+}
+
 
 /** @fn void mode_set(struct domain *d, int mode)
  * @brief Setup the domain context from shared_page context
@@ -441,39 +492,30 @@ void mode_set(struct domain *d, int mode)
 {
 	struct shared_page *s = d->sp;
 
+	d->old_mode2 = d->old_mode;
 	d->old_mode = d->mode;
 	d->mode = mode;
-	if (d->id != 4) debmode("set [%d] old %d mode %x\n", d->id, d->old_mode, mode);
+	/* Save SPSR to be used by domains to know old mode	*/
+	s->v_spsr = s->v_cpsr;
 	switch (mode) {
 	case DMODE_IRQ:
 		d->ctx.sregs = s->context_irq.sregs;
 		s->v_cpsr = (m_irq|dis_irqs);
-		if (d->id != 4) debmode("set IRQ ctx: PC: %08lx\n", d->ctx.sregs.pc);
 		break;
 	case DMODE_ABT:
 		d->ctx.sregs = s->context_abt.sregs;
-		if (d->old_mode == DMODE_SVC)
-			d->ctx.sregs.sp = s->context_sys.sregs.sp;
-		else {
-			//debctx("[%d] old mode %x\n", d->id, d->old_mode);
-			//d->ctx.sregs.sp = s->context_usr.sregs.sp;
-	//C'est Linux qui doit faire cela pas toi !!!!!
-			//while(1);
-		}
 		s->v_cpsr = m_abt|dis_irqs;
-		debabt("save context at %08lx\n", &d->ctx);
 		break;
 	case DMODE_USR:
 		d->ctx = s->context_usr;
-		if (d->id != 4) debmode("set USR ctx: PC: %08lx\n", d->ctx.sregs.pc);
 		s->v_cpsr = m_usr;
 		break;
 	case DMODE_SVC:
 		d->ctx = s->context_sys;
-		if (d->id != 4) debmode("set SVC ctx: PC: %08lx\n", d->ctx.sregs.pc);
-		s->v_cpsr = (m_svc|d->d_cpsr);
+		s->v_cpsr = (m_svc|dis_irqs);
 		break;
 	case DMODE_SYSCALL:
+		d->ctx = s->context_usr;
 		d->ctx.sregs = d->ctx_syscall.sregs;	/* Only special registers are updated */
 		d->mode = DMODE_SVC;
 		s->v_cpsr = (m_svc|dis_irqs);
@@ -483,13 +525,10 @@ void mode_set(struct domain *d, int mode)
 		while(1);
 		break;
 	}
-	if (d->id != 4) debmode("[%d] PC %08lx SP %08lx LR %08lx PSR %08lx\n", d->id, d->ctx.sregs.pc, d->ctx.sregs.sp, d->ctx.sregs.lr, d->ctx.sregs.spsr);
 	d->ctx.sregs.spsr &= ~mask_domain;
 	d->ctx.sregs.spsr |= mode_domain;
 	d->d_sum = context_sum(&d->ctx);
 	d->flags &= ~DFLAGS_HYPCALL;
-	debctx("ID %d set to %d\n", d->id, mode);
-	debctx("sched->need_resched %d\n", sched->need_resched);
 }
 
 /** @fn void mode_new(struct domain *d, int mode)
@@ -505,8 +544,14 @@ void mode_set(struct domain *d, int mode)
  */
 void mode_new(struct domain *d, int mode)
 {
-	debmode("[%d] old %d new %d\n", d->id, d->old_mode, mode);
+	//debmode("[%d] old %d new %d\n", d->id, d->old_mode, mode);
+	if (mode == DMODE_ABT) debabt("SYS SP: %08lx\n", d->sp->context_sys.sregs.sp);
+	if (mode == DMODE_ABT) debabt("CTX SP: %08lx\n", d->ctx.sregs.sp);
 	mode_save(d, d->mode);
+	if (mode == DMODE_ABT) debabt("SYS SP: %08lx\n", d->sp->context_sys.sregs.sp);
+	if (mode == DMODE_ABT) debabt("CTX SP: %08lx\n", d->ctx.sregs.sp);
 	mode_set(d, mode);
+	if (mode == DMODE_ABT) debabt("SYS SP: %08lx\n", d->sp->context_sys.sregs.sp);
+	if (mode == DMODE_ABT) debabt("CTX SP: %08lx\n", d->ctx.sregs.sp);
 }
 

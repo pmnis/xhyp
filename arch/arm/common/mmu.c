@@ -162,18 +162,18 @@ void new_pmd_at(unsigned long pmd, int index)
 	unsigned long i;
 
 	pmd &= ~(PMD_ALIGN - 1);
-	debinfo("pmd: %08lx - index %08lx\n", pmd, index);
+	debpte("pmd: %08lx - index %08lx\n", pmd, index);
 	p = (unsigned long *)dom_to_hyp(pmd);
-	debinfo("src: %p\n", p);
+	debpte("src: %p\n", p);
 	q = &current->tbl_l2[index * NB_PTE_ENTRIES];
-	debinfo("dst: %p\n", q);
+	debpte("dst: %p\n", q);
 	for(i = 0; i < NB_PTE_ENTRIES; i++, q++, p++) {
 		*q = 0;
 		if (!(*p & VPTE_VALID_BIT))
 			continue;
-		deb_printf(DEB_INFO, "PTE[%02x] %08lx: %08lx\n", i, p, *p);
+		debpte("PTE[%02x] %08lx: %08lx\n", i, p, *p);
 		*q = vpte_to_pte(*p);
-		deb_printf(DEB_INFO, "PTE[%02x] %08lx: %08lx\n", i, q, *q);
+		debpte("PTE[%02x] %08lx: %08lx\n", i, q, *q);
 	}
 }
 
@@ -187,10 +187,10 @@ void new_pgd_at(unsigned long *pgd)
 	unsigned long *q;
 	unsigned long i;
 
-	debinfo("pgd %08lx\n", pgd);
+	debpte("pgd %08lx\n", pgd);
 	current->sp->v_pgd = (unsigned long) pgd;
 	pgd = (unsigned long *) virt_to_phys(current, (unsigned long)pgd);
-	debinfo("pgd %08lx\n", pgd);
+	debpte("pgd %08lx\n", pgd);
 
 	p = pgd;
 	q = (unsigned long *) current->tbl_l1;
@@ -199,7 +199,7 @@ void new_pgd_at(unsigned long *pgd)
 	for(i = 1; i < NB_PMD_ENTRIES; i++, q++, p++) {
 		*q = 0;
 		if (! (*p & VSEC_VALID_BIT)) {
-			if (*p) debinfo("pmd[%03x] %08lx: %08lx\n", i, p, *p);
+			if (*p) debpte("pmd[%03x] %08lx: %08lx\n", i, p, *p);
 			continue;
 		}
 		if (*p & VSEC_TYPE_BIT) {
@@ -207,15 +207,15 @@ void new_pgd_at(unsigned long *pgd)
 			if (!pmd_in_domain(q)) {
 				*q = 0;
 			} else {
-				deb_printf(DEB_INFO, "pmd[%03x] %08lx: %08lx\n", i, *p, *q);
+				debpte("pmd[%03x] %08lx: %08lx\n", i, *p, *q);
 			}
 		} else {
-			deb_printf(DEB_INFO, "COARSE[%03x] %08lx: %08lx\n", i, p, *p);
+			debpte("COARSE[%03x] %08lx: %08lx\n", i, p, *p);
 			*q = vpmd_to_pmd(*p, i);
-			deb_printf(DEB_INFO, "PTE   [%02x] %08lx: %08lx\n", i, q, *q);
+			debpte("PTE   [%02x] %08lx: %08lx\n", i, q, *q);
 			new_pmd_at(*p, i);
 		}
-		//debinfo("q[%02d]: %08lx\n", i, *q);
+		//debpte("q[%02d]: %08lx\n", i, *q);
 	}
 //while(1);
 	return;
@@ -234,7 +234,7 @@ int hyp_switch_mm(void)
 	pgd = _context->regs.regs[0];
 
 	/* calculate real PGD address	*/
-	deb_printf(DEB_INFO, "PGD 0x%08lx\n", pgd);
+	debpte("PGD 0x%08lx\n", pgd);
 	new_pgd_at((unsigned long *)pgd);
 
 	switch_to();
@@ -284,15 +284,15 @@ int hyp_set_pmd(void)
 	ptr = _context->regs.regs[2];
 	pmd = _context->regs.regs[3];
 
-	debinfo("pgd: %08lx address %08lx ptr %08lx pmd %08lx\n", pgd, address, ptr, pmd);
+	debpte("pgd: %08lx address %08lx ptr %08lx pmd %08lx\n", pgd, address, ptr, pmd);
 
 	/* find pmd entry	*/
 	i = (ptr - pgd)/4;
-	debinfo("i: %08lx\n", i);
+	debpte("i: %08lx\n", i);
 	p = (unsigned long *) current->tbl_l1;
-	debinfo("pgd: %08lx\n", p);
+	debpte("pgd: %08lx\n", p);
 	p[i] = vpmd_to_pmd(pmd, i);
-	debinfo("pgd[%x]: %08lx\n", i, p[i]);
+	debpte("pgd[%x]: %08lx\n", i, p[i]);
 
 	show_ventry((unsigned long *)current->tbl_l1, i << 20);
 
@@ -317,28 +317,28 @@ int hyp_set_pte(void)
 	pte = _context->regs.regs[3];
 
 
-	debinfo("pgd: %08lx address %08lx pte: %08lx is %08lx\n", pgd, address, ptr, pte);
+	debpte("pgd: %08lx address %08lx pte: %08lx is %08lx\n", pgd, address, ptr, pte);
 
 	if (pgd != current->sp->v_pgd) {
-		debinfo("v_pgd: %08lx != %08lx \n", current->sp->v_pgd, pgd);
-		return 0;
+		debpte("v_pgd: %08lx != %08lx \n", current->sp->v_pgd, pgd);
+		//return 0;
 	}
 
 
 	i1 = (address >> 20) & 0xfff;
 	i2 = (address >> 12) & 0xff;
-	debinfo("i1: %08lx\n", i1);
-	debinfo("i2: %08lx\n", i2);
+	debpte("i1: %08lx\n", i1);
+	debpte("i2: %08lx\n", i2);
 	
 	q = &current->tbl_l2[i1 * NB_PTE_ENTRIES];
 	q += i2;
-	//debinfo("dst: %p\n", q);
+	//debpte("dst: %p\n", q);
 	if ((pte & VPTE_VALID_BIT)) {
-		debinfo("PTE[%02x] %08lx\n", i2, pte);
+		debpte("PTE[%02x] %08lx\n", i2, pte);
 		*q = vpte_to_pte(pte);
-		debinfo("PTE[%02x] %08lx: %08lx\n", i2, q, *q);
+		debpte("PTE[%02x] %08lx: %08lx\n", i2, q, *q);
 	} else {
-		debinfo("invalid PTE %08lx set to 0\n", pte);
+		debpte("invalid PTE %08lx set to 0\n", pte);
 		*q = 0;
 		if (pte) while(1);
 	}
@@ -392,8 +392,8 @@ unsigned long pgd_translate(unsigned long vpgd)
 	unsigned long *dst = pgd;
 	int i;
 
-	deb_printf(DEB_INFO, "vpgd: %p\n", src);
-	deb_printf(DEB_INFO, "pgd : %p\n", dst);
+	debpte("vpgd: %p\n", src);
+	debpte("pgd : %p\n", dst);
 
 	for (i = addr_to_sec(xhyp->size); i < PGD_SIZE; i++) {
 		if (*src & VSEC_VALID_BIT)  {

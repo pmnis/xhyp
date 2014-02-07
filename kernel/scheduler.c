@@ -89,6 +89,7 @@ void context_restore(void)
 	debctx("flags %x current->ctx_level: %d\n", current->flags, current->ctx_level);
 	if (--current->ctx_level) {
 		debpanic("current->ctx_level: %d\n", current->ctx_level);
+		event_dump_last(20);
 		while(1);
 	}
 
@@ -108,6 +109,7 @@ void context_restore(void)
 		debpanic("SPSR.................... %08lx\n", _context->sregs.spsr);
 		for (i=0, p = (unsigned long *)_context; i < 17; i++, p++)
 			debpanic("R[%02d]: %08lx\n", i, *p);
+		event_dump_last(20);
 		while(1);
 	}
 	//debctx("______________________________ sum %08lx\n", sum);

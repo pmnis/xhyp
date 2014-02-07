@@ -36,7 +36,7 @@
 //unsigned long debug_level = DEB_PANIC|DEB_INFO|DEB_HYP|DEB_IRQ|DEB_SCHED|DEB_CTX;
 //unsigned long debug_level = DEB_PANIC|DEB_INFO|DEB_HYP|DEB_PTE|DEB_CTX;
 //unsigned long debug_level = DEB_PANIC|DEB_INFO|DEB_HYP|DEB_PTE;
-//unsigned long debug_level = DEB_PANIC|DEB_INFO|DEB_ABT;
+//unsigned long debug_level = DEB_PANIC|DEB_INFO|DEB_ABT|DEB_MODE;
 //unsigned long debug_level = DEB_PANIC|DEB_INFO|DEB_SCHED|DEB_CTX;
 //unsigned long debug_level = DEB_PANIC|DEB_INFO|DEB_ABT|DEB_IRQ|DEB_SCHED;
 //unsigned long debug_level = DEB_PANIC|DEB_INFO|DEB_ABT|DEB_IRQ|DEB_HYP|DEB_SCHED;
