@@ -99,10 +99,11 @@ int abt_count = 20;
 void do_abort(unsigned long far, unsigned long dfsr)
 {
 	struct shared_page *s = current->sp;
+
+	debinfo("pc  : %08lx\n", _context->sregs.pc);
+	debinfo("dfsr: %08lx\n", dfsr);
+	debinfo("far : %08lx\n", far);
 /*
-	debabt("dfsr: %08lx\n", dfsr);
-	debabt("far : %08lx\n", far);
-	debabt("pc  : %08lx\n", _context->sregs.pc);
 	debabt("lr  : %08lx\n", _context->sregs.lr);
 	debabt("sp  : %08lx\n", _context->sregs.sp);
 	debabt("r0  : %08lx\n", _context->regs.regs[0]);
@@ -114,16 +115,11 @@ void do_abort(unsigned long far, unsigned long dfsr)
 	debabt("r6  : %08lx\n", _context->regs.regs[6]);
 	debabt("r7  : %08lx\n", _context->regs.regs[7]);
 */
-	if (analyse_fault(dfsr, far)) {
-		panic(NULL, "Unimplemented");
-	}
-
-
-//if (abt_count-- <= 0) {
-		//debabt("STOP\n");
-		//while(1);
+	//if (analyse_fault(dfsr, far)) {
+		//panic(NULL, "Unimplemented");
 	//}
 
+	//if (abt_count-- < 0) while(1);
 	/* if no abort handler kill the domain		*/
 	if (! s->context_abt.sregs.pc) {
 		debpanic("Abort but no handler\n");
@@ -137,11 +133,8 @@ void do_abort(unsigned long far, unsigned long dfsr)
 	}
 	/* Save old mode and set new mode to ABT	*/
 	
-	//debabt("MODE: %d OLDMODE %d\n", current->mode, current->old_mode);
-	//event_dump_last(200);
-	//debabt("SYS SP: %08lx\n", current->sp->context_sys.sregs.sp);
+	debabt("MODE: %d OLDMODE %d\n", current->mode, current->old_mode);
 	mode_new(current, DMODE_ABT);
-	//debabt("SYS SP: %08lx\n", current->sp->context_sys.sregs.sp);
 	/* add fault address and cause		*/
 	if (current->old_mode == DMODE_SVC)
 		current->ctx.regs.regs[0] = phys_to_virt(current, (unsigned long ) &s->context_sys);
@@ -149,9 +142,6 @@ void do_abort(unsigned long far, unsigned long dfsr)
 		current->ctx.regs.regs[0] = phys_to_virt(current, (unsigned long ) &s->context_usr);
 	current->ctx.regs.regs[1] = far;
 	current->ctx.regs.regs[2] = dfsr;
-
-	//debabt("SYS SP: %08lx\n", current->sp->context_sys.sregs.sp);
-	//debabt("SP: %08lx\n", current->ctx.sregs.sp);
 
 }
 

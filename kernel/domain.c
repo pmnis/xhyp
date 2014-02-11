@@ -443,22 +443,26 @@ void mode_restore(struct domain *d)
 	d->mode = d->old_mode;
 	d->old_mode = d->old_mode2;
 	d->old_mode2 = -1;
+
+	s->v_cpsr = s->v_spsr;
+
 	switch (d->mode) {
 	case DMODE_USR:
 		d->ctx = s->context_usr;
 		break;
 	case DMODE_SVC:
 		d->ctx = s->context_sys;
+		s->v_spsr = d->d_spsr;
 		break;
 	default:
 		debpanic("Should not append, from mode %d to mode %d\n", mode, d->mode);
 		while(1);
 		break;
 	}
-	s->v_cpsr = s->v_spsr;
 	d->ctx.sregs.spsr &= ~mask_domain;
 	d->ctx.sregs.spsr |= mode_domain;
 	d->d_sum = context_sum(&d->ctx);
+
 	d->flags &= ~DFLAGS_HYPCALL;
 }
 
@@ -496,7 +500,9 @@ void mode_set(struct domain *d, int mode)
 	d->old_mode = d->mode;
 	d->mode = mode;
 	/* Save SPSR to be used by domains to know old mode	*/
+	d->d_spsr = s->v_spsr;
 	s->v_spsr = s->v_cpsr;
+
 	switch (mode) {
 	case DMODE_IRQ:
 		d->ctx.sregs = s->context_irq.sregs;
@@ -544,14 +550,7 @@ void mode_set(struct domain *d, int mode)
  */
 void mode_new(struct domain *d, int mode)
 {
-	//debmode("[%d] old %d new %d\n", d->id, d->old_mode, mode);
-	if (mode == DMODE_ABT) debabt("SYS SP: %08lx\n", d->sp->context_sys.sregs.sp);
-	if (mode == DMODE_ABT) debabt("CTX SP: %08lx\n", d->ctx.sregs.sp);
 	mode_save(d, d->mode);
-	if (mode == DMODE_ABT) debabt("SYS SP: %08lx\n", d->sp->context_sys.sregs.sp);
-	if (mode == DMODE_ABT) debabt("CTX SP: %08lx\n", d->ctx.sregs.sp);
 	mode_set(d, mode);
-	if (mode == DMODE_ABT) debabt("SYS SP: %08lx\n", d->sp->context_sys.sregs.sp);
-	if (mode == DMODE_ABT) debabt("CTX SP: %08lx\n", d->ctx.sregs.sp);
 }
 

@@ -31,7 +31,7 @@
 #ifdef DEBUG
 void show_pte(unsigned long *pte)
 {
-	debpte("pte %08lx %08lx\n", pte, *pte);
+	debinfo("pte %08lx %08lx\n", pte, *pte);
 }
 
 void show_section(unsigned long *s)
@@ -80,13 +80,16 @@ void show_coarse(unsigned long *c)
 {
 	unsigned char d = (*c >> 5 & 0xff);
 	unsigned long t = (*c & 0xfffffc00);
-	int nb_show = 4;
+	int nb_show = 256;
 	int i = 0;
+	unsigned long *pte;
 
-	debpte("Coarse %08x d: %01x to %08x\n",c, d, t);
+	debinfo("Coarse %08x d: %01x to %08x\n",c, d, t);
 
 	while (nb_show-- > 0) {
-		show_pte((unsigned long *)(t + 4 * i));
+		//show_pte((unsigned long *)(t + 4 * i));
+		pte = (unsigned long *)(t + 4 * i);
+		debinfo("--> [%02x] pte %08lx %08lx\n", i, pte, *pte);
 		i++;
 	}
 }

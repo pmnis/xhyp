@@ -108,6 +108,8 @@ void exp_data_abrt(void)
 {
 	unsigned long far;
 	unsigned long dfsr;
+	unsigned long fsr;
+	unsigned long *instr;
 
 	debctx("\n");
 
@@ -116,13 +118,35 @@ void exp_data_abrt(void)
         dfsr = _get_dfsr();
         far = _get_far();
 
+	switch (dfsr & 0x0f) {
+	case 0x05:	
+		fsr = XHYP_FLT_TRANSLAT;
+		break;
+	case 0x07:
+		fsr = XHYP_FLT_PAGE;
+		break;
+	case 0x0d:
+		fsr = XHYP_FLT_SEC;
+		break;
+	default:
+		debpanic("Unknown DFSR: %08lx\n", dfsr);
+		while(1);
+	}
+
+	instr = (unsigned long *) dom_virt_to_hyp(current, _context->sregs.pc);
+	debinfo("Instruction %08lx at %08lx : %08lx\n", _context->sregs.pc, instr, *instr);
+	if (!(*instr & (1 << 20))) {
+		fsr |= XHYP_FLT_WRITE;
+		debinfo("XHYP_FLT_WRITE\n");
+	}
+
 	if (current->ctx_level) {
 		debpanic("current->ctx_level: %d\n", current->ctx_level);
 		event_dump_last(20);
 		while(1);
 	}
 
-	do_abort(far, dfsr);
+	do_abort(far, fsr);
 
 	event_new(EVT_ABTOUT);
 
@@ -138,18 +162,38 @@ void exp_prefetch(void)
 {
 	unsigned long far;
 	unsigned long dfsr;
+	unsigned long fsr;
 
-	debabt("PC at %08lx\n", _context->sregs.pc);
+	debinfo("PC at %08lx\n", _context->sregs.pc);
 
 	debctx("\n");
 	//context_save();
 	event_new(EVT_ABT);
 
-	//mode_save(current, current->mode);
-        dfsr = 5;	/* Say it is a page fault */
+        dfsr = _get_dfsr();
+	debinfo("DFSR: %08lx\n", dfsr);
+        //dfsr = 5;	/* Say it is a page fault */
+
+	fsr = XHYP_FLT_PREFETCH;
+
+	switch (dfsr & 0x0f) {
+	case 0x05:	
+		fsr = XHYP_FLT_TRANSLAT;
+		break;
+	case 0x07:
+	case 0x0f:
+		fsr = XHYP_FLT_PAGE;
+		break;
+	case 0x0d:
+		fsr = XHYP_FLT_SEC;
+		break;
+	default:
+		debpanic("Unknown DFSR: %08lx\n", dfsr);
+		while(1);
+	}
         far = _context->sregs.pc;
 
-	do_abort(far, dfsr);
+	do_abort(far, fsr);
 
 	event_new(EVT_ABTOUT);
 

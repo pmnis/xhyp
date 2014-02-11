@@ -159,6 +159,7 @@ struct domain {
 	unsigned long	d_drv_type;
 	unsigned long	d_pgd;
 	unsigned long	d_cpsr;
+	unsigned long	d_spsr;
 };
 
 struct runqueue {

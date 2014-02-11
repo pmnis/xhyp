@@ -54,7 +54,7 @@ call_entry_t	hypercall_table[_HYP_CALLS] = {
 /*00*/	hyp_syscall,
 	hyp_console,
 	hyp_yield,
-	hyp_NONE,
+	hyp_trace,
 	hyp_NONE,
 /*05*/	hyp_irq_request,
 	hyp_irq_enable,
@@ -168,6 +168,16 @@ int hyp_task_switch(void)
 	ctx = (struct context *)(virt_to_phys(current, CTX_arg0));
 	/* Setup the next context		*/
 	*_context = *ctx;
+	return 0;
+}
+
+/** @fn int hyp_trace(void)
+ * @brief tracing hyper call
+ * show the registers and other context entries
+ */
+int hyp_trace(void)
+{
+	show_ctx(_context);
 	return 0;
 }
 
@@ -317,6 +327,10 @@ int hyp_syscall(void)
 
 	last_callnr = callnr;
 	last_spsr = _context->sregs.spsr;
+
+	//if (callnr == 3) {
+		//show_entry((unsigned long *) current->tbl_l1);
+	//}
 
 	debinfo("========= syscall %d (%x)  SPSR   0x%08lx  PC 0x%08lx=======\n", callnr, callnr, _context->sregs.spsr, _context->sregs.pc);
 	if (current->mode != DMODE_USR) {

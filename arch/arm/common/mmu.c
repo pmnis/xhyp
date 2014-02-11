@@ -174,6 +174,8 @@ void new_pmd_at(unsigned long pmd, int index)
 		debpte("PTE[%02x] %08lx: %08lx\n", i, p, *p);
 		*q = vpte_to_pte(*p);
 		debpte("PTE[%02x] %08lx: %08lx\n", i, q, *q);
+		if ((*q & 0xfffff000) == 0x03010000)
+			debinfo("====== GOT IT pte %08lx for vpte %08lx\n", *q, *p);
 	}
 }
 
@@ -242,26 +244,6 @@ int hyp_switch_mm(void)
 	return 0;
 }
 
-/*
-int hyp_set_pte_ext(void)
-{
-	unsigned long pte;
-	unsigned long *ptr;
-	unsigned long ext;
-
-	ptr = (unsigned long *) _context->regs.regs[0];
-	pte = _context->regs.regs[1];
-	ext = _context->regs.regs[2];
-
-	deb_printf(DEB_INFO, "pte: %08lx at %08lx ext: %08lx\n", pte, ptr, ext);
-while(1);
-	deb_printf(DEB_INFO, "pte: %08lx at %08lx\n", pte, ptr);
-
-	*ptr = pte;
-
-	return 0;
-}
-*/
 /*
  * CTX is:
  * r0: pgd
@@ -337,6 +319,8 @@ int hyp_set_pte(void)
 		debpte("PTE[%02x] %08lx\n", i2, pte);
 		*q = vpte_to_pte(pte);
 		debpte("PTE[%02x] %08lx: %08lx\n", i2, q, *q);
+		if ((*q & 0xfffff000) == 0x03010000)
+			debinfo("====== GOT IT pte %08lx for vpte %08lx\n", *q, pte);
 	} else {
 		debpte("invalid PTE %08lx set to 0\n", pte);
 		*q = 0;

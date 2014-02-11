@@ -6,3 +6,4 @@ T1
 include/autoconf.h
 setpte.txt
 .config
+doit.sh

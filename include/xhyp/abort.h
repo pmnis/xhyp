@@ -26,4 +26,11 @@
 
 void do_abort(unsigned long, unsigned long);
 int hyp_abt_return(void);
+
+#define XHYP_FLT_TRANSLAT	0x01
+#define XHYP_FLT_PAGE		0x02
+#define XHYP_FLT_SEC		0x04
+#define XHYP_FLT_WRITE		0x08
+#define XHYP_FLT_PREFETCH	0x10
+
 #endif

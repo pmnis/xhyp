@@ -143,6 +143,7 @@ extern int hyp_usr_return(void);
 extern int hyp_get_tls(void);
 extern int hyp_cmpxchg(void);
 extern int hyp_cmpxchg64(void);
+extern int hyp_trace(void);
 
 #define HYPCMD_DOM_GET	0
 #define HYPCMD_DOM_STOP	1
