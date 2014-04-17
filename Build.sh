@@ -3,6 +3,9 @@
 BASE=$(pwd)
 export INCLUDE=${BASE}/include
 
+CROSS_COMPILE=${CROSS_COMPILE:-arm-linux-}
+export CROSS_COMPILE
+
 # try find the board
 [[ -r .config ]] && source ./.config
 
@@ -236,7 +239,7 @@ printf "Linking xhyp ... "
 
 export LDFLAGS="-Bstatic -T xhyp.ld "
 ${LD} ${LDFLAGS} ${LIBS} ${GENERATED} ${DOMAINS} -o xhyp
-arm-none-linux-gnueabi-nm xhyp > xhyp.nm
+${CROSS_COMPILE}nm xhyp > xhyp.nm
 
 
 [[ $1 == "clean" ]] && exit 0

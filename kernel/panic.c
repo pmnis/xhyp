@@ -56,7 +56,7 @@ void panic(struct context *ctx, char *s)
 
 	debpanic("PANIC: %s\n",s);
 	if (PANIC++) while(1);	/* Avoid double fault */
-	//r = _cpu_it_disable(0);
+	r = _cpu_it_disable(0);
 	debpanic("PANIC: %s\n",s);
 	debug_level |= DEB_CTX | DEB_PANIC ;
 	if (ctx) {

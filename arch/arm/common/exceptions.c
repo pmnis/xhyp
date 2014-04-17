@@ -123,6 +123,7 @@ void exp_data_abrt(void)
 		fsr = XHYP_FLT_TRANSLAT;
 		break;
 	case 0x07:
+	case 0x0f:
 		fsr = XHYP_FLT_PAGE;
 		break;
 	case 0x0d:

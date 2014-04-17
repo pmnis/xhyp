@@ -70,7 +70,7 @@ void show_ctx(struct context *ctx)
 
 	debctx("mode: %08lx old_mode: %08lx\n", current->mode, current->old_mode);
 
-	for (index = 0, p = (unsigned long *)ctx; index < 16; index++, p++) {
+	for (index = 0, p = (unsigned long *)ctx; index < (sizeof(*ctx)/sizeof(long)); index++, p++) {
 		printk("R%02d %08x\n", index, *p);
 		//if ( index % 8 == 7 ) printk("\n");
 	}
@@ -290,7 +290,7 @@ int setup_domains(void)
 			continue;
 		/* Initialize state and mode	*/
 		d->old_mode = DMODE_INIT;
-		d->old_mode2 = -1;
+		d->old_mode2 = DMODE_NONE;
 		mode_set(d, DMODE_SVC);
 		/* allocate page table	*/
 		alloc_page_tables(d);
@@ -442,7 +442,7 @@ void mode_restore(struct domain *d)
 	mode = d->mode;
 	d->mode = d->old_mode;
 	d->old_mode = d->old_mode2;
-	d->old_mode2 = -1;
+	d->old_mode2 = DMODE_NONE;
 
 	s->v_cpsr = s->v_spsr;
 

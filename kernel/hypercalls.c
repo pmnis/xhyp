@@ -177,6 +177,7 @@ int hyp_task_switch(void)
  */
 int hyp_trace(void)
 {
+	event_dump_last(1);
 	show_ctx(_context);
 	return 0;
 }
@@ -199,8 +200,8 @@ int hyp_NONE(void)
  */
 int hyp_new_pgd(void)
 {
+	debinfo("pgd: %08lx\n", CTX_arg0);
 	new_pgd_at((unsigned long *) CTX_arg0);
-debinfo("\n");
 	switch_to();
 	return 0;
 }
@@ -301,7 +302,6 @@ int hyp_syscall_request(void)
 }
 
 int deb_on = 0;
-unsigned long last_callnr = 0;
 unsigned long last_spsr = 0;
 /** @fn int hyp_syscall(void)
  * @brief Hypercall to implement system calls
@@ -325,7 +325,6 @@ int hyp_syscall(void)
 		callnr = _context->regs.regs[0];
 	}
 
-	last_callnr = callnr;
 	last_spsr = _context->sregs.spsr;
 
 	//if (callnr == 3) {
@@ -365,22 +364,18 @@ int hyp_syscall_return(void)
 {
 	struct shared_page *s = current->sp;
 	unsigned long retval, spsr;
-	unsigned long callnr = last_callnr;
+	struct context *ctx = &s->context_usr;
 
 	retval = s->context_usr.regs.regs[0];
 	debhyp("retval: %08lx\n", retval);
 
         event_new(EVT_SYSRET);
 
-	debhyp("========= syscall %d  SPSR   0x%08lx =======\n", callnr, s->context_usr.sregs.spsr);
+	debinfo("========= syscall %d (%x)  SPSR   0x%08lx  PC 0x%08lx=======\n", s->v_syscall, s->v_syscall, ctx->sregs.spsr, ctx->sregs.pc);
 	current->ctx_level++;	/* We restore from another mode */
 	mode_restore(current);
-	debhyp("========= syscall %d  SPSR   0x%08lx =======\n", callnr, s->context_usr.sregs.spsr);
-	debhyp("========= syscall %d  SPSR   0x%08lx =======\n", last_callnr, current->ctx.sregs.spsr);
 
 	spsr = current->ctx.sregs.spsr;
-
-if (spsr != last_spsr) while(1);
 
         current->flags &= ~DFLAGS_HYPCALL;
 
@@ -464,6 +459,7 @@ int hyp_usr_return(void)
         event_new(EVT_USRRET);
         current->flags &= ~DFLAGS_HYPCALL;
 
+	debinfo("\n");
 	current->ctx_level++;	/* We restore from another mode */
 	mode_set(current, DMODE_USR);
 

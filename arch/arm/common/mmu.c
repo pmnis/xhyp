@@ -266,7 +266,7 @@ int hyp_set_pmd(void)
 	ptr = _context->regs.regs[2];
 	pmd = _context->regs.regs[3];
 
-	debpte("pgd: %08lx address %08lx ptr %08lx pmd %08lx\n", pgd, address, ptr, pmd);
+	debinfo("pgd: %08lx address %08lx ptr %08lx pmd %08lx\n", pgd, address, ptr, pmd);
 
 	/* find pmd entry	*/
 	i = (ptr - pgd)/4;
@@ -299,7 +299,7 @@ int hyp_set_pte(void)
 	pte = _context->regs.regs[3];
 
 
-	debpte("pgd: %08lx address %08lx pte: %08lx is %08lx\n", pgd, address, ptr, pte);
+	debinfo("pgd: %08lx address %08lx pte: %08lx is %08lx\n", pgd, address, ptr, pte);
 
 	if (pgd != current->sp->v_pgd) {
 		debpte("v_pgd: %08lx != %08lx \n", current->sp->v_pgd, pgd);
@@ -322,7 +322,8 @@ int hyp_set_pte(void)
 		if ((*q & 0xfffff000) == 0x03010000)
 			debinfo("====== GOT IT pte %08lx for vpte %08lx\n", *q, pte);
 	} else {
-		debpte("invalid PTE %08lx set to 0\n", pte);
+		debpanic("invalid PTE %08lx set to 0\n", pte);
+		debinfo("pgd: %08lx address %08lx pte: %08lx is %08lx\n", pgd, address, ptr, pte);
 		*q = 0;
 		if (pte) while(1);
 	}

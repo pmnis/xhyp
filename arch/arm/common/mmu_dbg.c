@@ -51,10 +51,10 @@ void show_ventry(unsigned long *pgd, unsigned long vaddr)
 	unsigned long idx;
 
 	idx = (vaddr >> 20) & 0x0fff;
-	debpte("idx : %08lx %08lx %08lx\n", pgd, vaddr, idx);
+	debpte("pgd %08lx vaddr %08lx idx %08lx\n", pgd, vaddr, idx);
 	l1 = pgd + idx;
 	debpte("%08lx %08lx %08lx\n", pgd, vaddr, l1);
-	debpte("%08lx %08lx %08lx\n", pgd, vaddr, *l1);
+	debinfo("pgd %08lx vaddr %08lx *l1 %08lx\n", pgd, vaddr, *l1);
 	switch (*l1 & 0x03) {
 	case 0x01:
 		l2 = (unsigned long *) (*l1 & 0xfffffc00);

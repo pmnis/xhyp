@@ -41,8 +41,8 @@ struct shared_page {
 	struct context	context_svc;
 	struct context	context_irq;
 	unsigned long	jiffies;
-	unsigned long	irq;
-	unsigned long	last_state;
+	unsigned long	v_irq;
+	unsigned long	v_syscall;
 	unsigned long 	v_cpsr;
 	unsigned long 	v_spsr;
 	unsigned long 	v_irq_enabled;

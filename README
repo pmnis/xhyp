@@ -73,7 +73,7 @@ Then you hopefully just need to start building xhyp with:
 
 You can actually test xhyp inside a qemu box with:
 
-#  qemu-system-arm -M versatilepb -kernel xhyp -nographic xhyp
+#  qemu-system-arm -M versatilepb -kernel xhyp -nographic
 
 Contact us for more informations at contact@xhyp.org
 

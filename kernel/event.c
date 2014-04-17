@@ -71,17 +71,17 @@ char *hypcall_str[_HYP_CALLS] = {
 	"syscall",
 	"console",
 	"yield",
-	"getpage",
-	"freepage",
+	"trace",
+	"NONE",
 	"irq_reques",
 	"irq_enable",
 	"irq_disabl",
 	"irq_return",
 	"exit",
 	"cpuctrl",
-	"syscall_request",
-	"syscall_return",
-	"pgfault_request",
+	"sysc_req",
+	"sysc_ret",
+	"pgflt_requ",
 	"undef_request",
 	"enable_mmu",
 	"setmode",
@@ -98,7 +98,7 @@ char *hypcall_str[_HYP_CALLS] = {
 	"dma_clean_range",
 	"dma_flush_range",
 	"dchache_clean_area",
-	"switch_mm",
+	"NONE",
 	"set_pte",
 	"tlb_flush",
 	"enable_cache",
@@ -108,8 +108,8 @@ char *hypcall_str[_HYP_CALLS] = {
 	"clear_page",
 	"new_pgd",
 	"set_pmd",
-	"set_pte_ext",
-	"get_pmdval",
+	"NONE",
+	"NONE",
 	"get_timer",
 	"io_open",
 	"io_read",
@@ -117,11 +117,11 @@ char *hypcall_str[_HYP_CALLS] = {
 	"io_ioctl",
 	"io_close",
 	"event_send",
-	"preempt_disable",
-	"preempt_enable",
+	"preempt_dis",
+	"preempt_en",
 	"hyp",
-	"abt_return",
-	"usr_return",
+	"abt_ret",
+	"usr_ret",
 	"get_tls",
 	"cmpxchg",
 	"cmpxchg64"
@@ -324,7 +324,7 @@ int event_new(int e)
 /** @var char *mode_str[DMODE_SIZE]
  * @brief the readable modes
  */
-char *mode_str[DMODE_SIZE] = { "INIT", "SVC", "IRQ", "USR", "ABT", "UND", "FIQ", "SYS", "HYP"};
+char *mode_str[DMODE_SIZE] = { "INI", "SVC", "IRQ", "USR", "ABT", "UND", "FIQ", "SYS", "HYP", "NON"};
 
 /** @fn void event_show(struct event *event)
  * @brief print an event on the console

@@ -35,7 +35,7 @@ unsigned int ring_get_entry(struct ring *f, void *p, unsigned int size, unsigned
 	if (cnt > n)
 		return 0;
 	ro = f->wi % f->sz;
-	if ( cnt <= ro ) {
+	if (cnt <= ro) {
 		memcpy(p, f->p + ro - cnt, size);
 		return size;
 	}
