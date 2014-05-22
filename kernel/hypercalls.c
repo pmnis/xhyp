@@ -363,7 +363,7 @@ int hyp_syscall(void)
 int hyp_syscall_return(void)
 {
 	struct shared_page *s = current->sp;
-	unsigned long retval, spsr;
+	unsigned long retval;
 	struct context *ctx = &s->context_usr;
 
 	retval = s->context_usr.regs.regs[0];
@@ -374,8 +374,6 @@ int hyp_syscall_return(void)
 	debinfo("========= syscall %d (%x)  SPSR   0x%08lx  PC 0x%08lx=======\n", s->v_syscall, s->v_syscall, ctx->sregs.spsr, ctx->sregs.pc);
 	current->ctx_level++;	/* We restore from another mode */
 	mode_restore(current);
-
-	spsr = current->ctx.sregs.spsr;
 
         current->flags &= ~DFLAGS_HYPCALL;
 
