@@ -240,6 +240,7 @@ static void sched_slice(void)
 static void sched_slice(void)
 {
 	current->slices++;
+	debirq("slice: %d\n", current->slices);
 	return;
 }
 #endif

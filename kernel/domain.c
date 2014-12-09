@@ -76,11 +76,11 @@ void show_ctx(struct context *ctx)
 	}
 
 
-	debctx("sp  	%08x\n", ctx->sregs.sp);
-	debctx("lr  	%08x\n", ctx->sregs.lr);
-	debctx("pc  	%08x\n", ctx->sregs.pc);
-	debctx("spsr	%08x\n", ctx->sregs.spsr);	// debug
-	debctx("cpsr	%08x\n", ctx->cpsr);
+	printk("sp  	%08x\n", ctx->sregs.sp);
+	printk("lr  	%08x\n", ctx->sregs.lr);
+	printk("pc  	%08x\n", ctx->sregs.pc);
+	printk("spsr	%08x\n", ctx->sregs.spsr);	// debug
+	printk("cpsr	%08x\n", ctx->cpsr);
 	debctx("far 	%08x\n", ctx->far);
 	debctx("dfsr	%08x\n", ctx->dfsr);
 	debctx("ifsr	%08x\n", ctx->ifsr);

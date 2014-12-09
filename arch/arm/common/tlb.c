@@ -33,25 +33,24 @@
 int hyp_tlb(void)
 {
 	unsigned long command;
-	unsigned long entry;
 	const unsigned long zero = 0;
 
 	debtlb("BEGIN\n");
 
 	command = CTX_arg0;
-	entry = CTX_arg1;
 
 	/* Invalidate entire TLB	*/
 	asm("mcr	p15, 0, %0, c8, c7, 0" : : "r" (zero) : "cc");
 	/* Invalidate L2 Cache	*/
 	/* TBD : if SMP only */
+/*
 	asm("mcr	p15, 0, %0, c7, c10, 1" : : "r" (entry) : "cc");
 	asm("mcr	p15, 0, %0, c15, c9, 1" : : "r" (entry) : "cc");
-
-	if (command == XHYP_TLB_FLUSH)
+*/
+	if (command == XHYP_TLB_FLUSH)	/* flush TLB */
 		asm("mcr	p15, 0, %0, c7, c10, 4" : : "r" (zero) : "cc");
 
-	deb_printf(DEB_TLB, "END\n");
+	debtlb("END\n");
 	return 0;
 }
 

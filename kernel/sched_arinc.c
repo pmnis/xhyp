@@ -120,6 +120,7 @@ static int sched_get(void)
 			if (d->state == DSTATE_READY) {
 				debsched("........... OK: %d\n", d->id);
 				current = d;
+				current->slices++;
 				return 1;
 			} else {
 				debsched("...........BAD: %d STATE %d\n", d->id, d->state);
@@ -190,7 +191,6 @@ static void sched_slice(void)
 	debsched("\n");
 	sched->need_resched = 1;
 	current->state = DSTATE_READY;
-	current->slices++;
 }
 
 static struct xhyp_scheduler sched_arinc = {

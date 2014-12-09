@@ -145,8 +145,9 @@ int stdio_write(unsigned long fd, unsigned long buf, unsigned long cnt)
 	ptr = (char *)virt_to_phys(current, buf);
 	if (!paddr_in_domain(current, (unsigned long) ptr)) {
 		debpanic("stdio_write Bad addr in r1: %08lx convert to %08lx\n", buf, ptr);
-debpanic("d->base_addr %08lx XHYP_MEM_SIZE %08lx (d->offset << SECTION_SHIFT) %08lx\n", current->base_addr, XHYP_MEM_SIZE, (current->offset << SECTION_SHIFT));
-		while(1);
+		debpanic("d->base_addr %08lx XHYP_MEM_SIZE %08lx (d->offset << SECTION_SHIFT) %08lx\n", current->base_addr, XHYP_MEM_SIZE, (current->offset << SECTION_SHIFT));
+		debpanic("Killing domain %d\n", current->id);
+		sched->kill(current);
 	}
 	cnt = fifo_put(&qp->fifo, (char *)ptr, cnt);
 	return 0;

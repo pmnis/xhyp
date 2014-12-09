@@ -50,7 +50,7 @@ unsigned long timer_set(unsigned long val, unsigned long ctrl)
 	return v;
 }
 
-unsigned long jiffies = 0;
+volatile unsigned long jiffies = 0;
 unsigned long period = 0;
 unsigned long tval = 0;
 int in_timer = 1;

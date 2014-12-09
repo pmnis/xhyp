@@ -221,19 +221,11 @@ int cmd_ps(char *s, char *args)
 			total += s_time[i];
 		}
 	}
-	//if (total < 10) {
-		//total = 0;
-		//for (i = 0; i < NB_DOMAINS; i++) {
-			//d_time[i] = s_time[i] * MICROS_PER_SEC + u_time[i];
-			//total += d_time[i];
-		//}
-	//} else {
-		total = 0;
-		for (i = 0; i < NB_DOMAINS; i++) {
-			d_time[i] = s_time[i];
-			total += d_time[i];
-		}
-	//}
+	total = 0;
+	for (i = 0; i < NB_DOMAINS; i++) {
+		d_time[i] = s_time[i];
+		total += d_time[i];
+	}
 	for (i = 0; i < NB_DOMAINS; i++) {
 		if (_hyp_hyp(HYPCMD_DOM_GET, i, &d)) {
 			colors[0] = '0' + i;

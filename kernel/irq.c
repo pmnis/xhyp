@@ -81,67 +81,19 @@ void send_irq(struct domain *d, unsigned long irq)
 	s = d->sp;
 	if (!(s->v_irq_enabled & irq))
 		return;
-	if (d->id == 4 && irq != 0x10) debinfo("IRQ for domain %d : %08lx\n", d->id, irq);
 	s->v_irq_pending |= irq;
+	d->irq++;
+	debirq("sending irq %d to domain %d\n", irq, d->id);
+
 	switch (d->state) {
 	case DSTATE_SLEEP:
 		sched->add_from_sleep(d);
 	case DSTATE_READY:
+	case DSTATE_RUN:
 		sched->need_resched++;
 	}
 }
-#if 0
-int ic = 0;
-void send_irq(struct domain *d, unsigned long irq)
-{
-	struct shared_page *s;
 
-	s = d->sp;
-	if (d->state & (DSTATE_STOP|DSTATE_NONE|DSTATE_DEAD))
-		return;
-
-	if (d->type == DTYPE_HYP) return;	/* Hypervizor domain	*/
-
-	debirq("d[%d] mode:%d: %08lx\n", d->id, d->mode, irq);
-	debirq("trace for %d\n", d->id);
-
-	if (d->mode == DMODE_IRQ) { 		/* Already in IRQ	*/
-		debirq("IN IRQ MODE: irq %08lx\n", irq);
-		s->v_irq_cached |= irq;		/* Remember irq		*/
-		return;
-	}
-	if (d->id != 4) debirq("IN MODE: %08lx\n", d->mode);
-	debirq("enab %08lx mask %08lx cpsr %08lx\n", s->v_irq_enabled, s->v_irq_mask, s->v_cpsr);
-	if (!(s->v_irq_enabled & irq)) return;	/* IRQ not enabled	*/
-	if ((s->v_irq_mask & irq)) return;	/* IRQ are masked	*/
-	if (s->v_cpsr & dis_irqs) return;	/* SOC IRQS disabled	*/
-	if (d->id != 4) debirq("d[%d] E:%08lx M:%08lx\n", d->id, s->v_irq_enabled, s->v_irq_mask);
-
-	/* update statistics	*/
-	d->irq++;
-	/* If the domain is sleeping, wake it up	*/
-	debirq("[%d]: state 0x%08lx mode 0x%08lx\n", d->id, d->state, d->mode);
-	if (d->state == DSTATE_SLEEP) {
-		sched->add(d);
-		d->state = DSTATE_READY;
-		debirq("[%d]: state 0x%08lx mode 0x%08lx\n", d->id, d->state, d->mode);
-	}
-	/* mark the IRQ as pending in the shared page	*/
-	s = d->sp;
-	s->v_irq_pending |= irq;
-
-	if (d->mode == DMODE_ABT) return;	/* do not interrupt abort */
-	irq &= ~s->v_irq_mask;			/* clear masked IRQ	*/
-	if (!irq) return;			/* deliver later	*/
-
-	/* The domain will transit to handle IRQ		*/
-	/* New mode is DMODE_IRQ, It will save ctx if needed	*/
-	/* and increment need_resched				*/
-	debirq("SET DMODE_IRQ\n");
-	mode_new(d, DMODE_IRQ);
-	debirq("ID %d\n", d->id);
-}
-#endif
 /*
  * Virtual interruptions for the domains
  */
@@ -212,7 +164,9 @@ int hyp_irq_return(void)
 	/* It will be reset from scratch on next interrupt		*/
 	/* But we need to say we did and increment the ctx_level	*/
 	current->ctx_level++;
+	event_new(EVT_SCHEDOUT);
 	mode_restore(current);
+	event_new(EVT_SCHEDIN);
 	context_restore();
 
 	switch_to();
@@ -234,8 +188,6 @@ int hyp_irq_request(void)
 
 	s->context_irq.sregs.pc = _context->regs.regs[0];
 	s->context_irq.sregs.sp = _context->regs.regs[1];
-	debirq("PC: %08lx\n", s->context_irq.sregs.pc);
-	debirq("SP: %08lx\n", s->context_irq.sregs.sp);
 	return 0;
 }
 
@@ -273,10 +225,11 @@ int hyp_irq_enable(void)
 		s->v_cpsr &= ~dis_irqs;
 	}
 
-	if (s->v_cpsr == 0x12) { /* Should GET AWAY	*/
-		//debpanic("SET CPSR to %08lx\n", s->v_cpsr);
-		//show_ctx(&current->ctx);
-		//exit();
+	if (s->v_cpsr == 0x12) {
+	/* Should GET AWAY, this should not be used by the guest*/
+		debpanic("SET CPSR to %08lx\n", s->v_cpsr);
+		sched->kill(current);
+	/* No return here	*/
 	}
 
 	if (s->v_cpsr & dis_irqs)	/* Interrupt are disabled on VCPU */
@@ -289,15 +242,13 @@ int hyp_irq_enable(void)
 	if (sched->need_resched)	/* The timer needs to reschedule */
 		schedule();
 
-	back = _context->sregs.spsr;	/* Should GET AWAY     */
+	/* The following code should GET AWAY     */
+	back = _context->sregs.spsr;
 	if (in != back) {
-		debpanic("Stop\n");
+		debpanic("Error in SPSR handling\n");
 		while(1);
 	}
-	if (s->v_cpsr == 0x12) {	/* Should GET AWAY     */
-		debpanic("STOP\n");
-		while(1);
-	}
+
 	/* IT not disabled, no IT pending or if then it is masked	*/
 	/* Nothing to do any more just return	*/
 	return 0;
@@ -326,14 +277,11 @@ int hyp_irq_disable(void)
 		s->v_cpsr |= dis_irqs;
 		break;
 	default:
-		debirq("Enabling %08lx\n", irq);
+		debirq("Disabling %08lx\n", irq);
 		s->v_irq_enabled &= ~irq;
 		break;
 	}
-	if (s->v_cpsr == 0x12) {
-		debpanic("unprotected IRQ\n");
-		while(1);
-	}
+
 	return 0;
 }
 

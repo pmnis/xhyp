@@ -31,7 +31,7 @@
 #ifdef DEBUG
 void show_pte(unsigned long *pte)
 {
-	debinfo("pte %08lx %08lx\n", pte, *pte);
+	debpte("pte %08lx %08lx\n", pte, *pte);
 }
 
 void show_section(unsigned long *s)
@@ -54,7 +54,7 @@ void show_ventry(unsigned long *pgd, unsigned long vaddr)
 	debpte("pgd %08lx vaddr %08lx idx %08lx\n", pgd, vaddr, idx);
 	l1 = pgd + idx;
 	debpte("%08lx %08lx %08lx\n", pgd, vaddr, l1);
-	debinfo("pgd %08lx vaddr %08lx *l1 %08lx\n", pgd, vaddr, *l1);
+	debpte("pgd %08lx vaddr %08lx *l1 %08lx\n", pgd, vaddr, *l1);
 	switch (*l1 & 0x03) {
 	case 0x01:
 		l2 = (unsigned long *) (*l1 & 0xfffffc00);
@@ -84,12 +84,12 @@ void show_coarse(unsigned long *c)
 	int i = 0;
 	unsigned long *pte;
 
-	debinfo("Coarse %08x d: %01x to %08x\n",c, d, t);
+	debpte("Coarse %08x d: %01x to %08x\n",c, d, t);
 
 	while (nb_show-- > 0) {
 		//show_pte((unsigned long *)(t + 4 * i));
 		pte = (unsigned long *)(t + 4 * i);
-		debinfo("--> [%02x] pte %08lx %08lx\n", i, pte, *pte);
+		debpte("--> [%02x] pte %08lx %08lx\n", i, pte, *pte);
 		i++;
 	}
 }

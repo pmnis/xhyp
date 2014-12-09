@@ -28,6 +28,12 @@
 #include <xhyp/sched.h>
 #include <xhyp/event.h>
 
+/** void time_get(struct timespec *ts)
+ *
+ * @ts: a pointer to the timespec structure to update
+ *
+ * retrieve time from jiffies and timer
+ */
 void time_get(struct timespec *ts)
 {
 	unsigned long t = HZ;
@@ -42,17 +48,34 @@ void time_get(struct timespec *ts)
 	ts->tv_usec = t;
 }
 struct timespec xtime;
+/** void time_update(void)
+ *
+ * update xtime variable.
+ */
 void time_update(void)
 {
 	time_get(&xtime);
 }
 
+/** void time_tick(void)
+ *
+ * Called on timer interrupt
+ * - increment domain's jiffies
+ *   - increment shared_page jiffies
+ *   - call scheduler tick function
+ */
 void time_tick(void)
 {
 	int i;
+	struct domain *d;
 
-	for(i = 0; i < nb_domains; i++)
-		domain_table[i].jiffies++;
+	d = &domain_table[0];
+	d->jiffies++;
+	for(i = 1; i < nb_domains; i++) {
+		d = &domain_table[i];
+		d->jiffies++;
+		d->sp->jiffies++;
+	}
 	sched->slice();
 }
 

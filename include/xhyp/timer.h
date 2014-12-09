@@ -40,7 +40,7 @@ extern unsigned long timer_freq;
 #define HZ		(1000 / CONFIG_TIMER_PERIOD)
 #define TIMER_PERIOD	CONFIG_TIMER_PERIOD
 
-extern unsigned long jiffies;
+extern volatile unsigned long jiffies;
 
 extern void timer_tick(void);
 extern unsigned long timer_get(void);

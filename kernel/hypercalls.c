@@ -117,13 +117,13 @@ int hypercall_count[_HYP_CALLS];
 
 /** @fn void hyp_mode_set(unsigned long mode)
  * @brief set new mode for hypercalls
- */
 void hyp_mode_set(unsigned long mode)
 {
 	mode_set(current, mode);
 	if (!sched->need_resched)
 		context_restore();
 }
+ */
 
 /** @fn void show_hypercall_count(void)
  * @brief show statistics on hypercalls
@@ -278,8 +278,15 @@ int hyp_pgfault_request(void)
 
 int hyp_setmode(void)
 {
-	debpanic("UNIMPLEMENTED\n");
-	panic(NULL, "UNIMPLEMENTED");
+	unsigned long mode;
+
+	mode = _context->regs.regs[0];
+
+	current->ctx_level = 1;
+	mode_set(current, mode);
+
+	context_restore();
+	switch_to();
 	return 0;
 }
 
@@ -317,7 +324,6 @@ unsigned long last_spsr = 0;
 int hyp_syscall(void)
 {
 	unsigned long callnr;
-	//struct shared_page *s = current->sp;
 
 	if (current->type == DTYPE_GPOS) {
 		callnr = _context->regs.regs[7];
@@ -327,11 +333,8 @@ int hyp_syscall(void)
 
 	last_spsr = _context->sregs.spsr;
 
-	//if (callnr == 3) {
-		//show_entry((unsigned long *) current->tbl_l1);
-	//}
 
-	debinfo("========= syscall %d (%x)  SPSR   0x%08lx  PC 0x%08lx=======\n", callnr, callnr, _context->sregs.spsr, _context->sregs.pc);
+	debinfo("       syscall %d\n", callnr);
 	if (current->mode != DMODE_USR) {
 		event_dump_last(20);
 		while(1);
@@ -339,9 +342,6 @@ int hyp_syscall(void)
 	}
 
 	mode_new(current, DMODE_SYSCALL);
-
-	//debinfo("========= syscall %d  SPSR   0x%08lx =======\n", callnr, s->context_usr.sregs.spsr);
-	//debinfo("========= syscall %d  SP     0x%08lx =======\n", callnr, current->ctx.sregs.sp);
 
 	current->syscall++;
 
@@ -357,26 +357,27 @@ int hyp_syscall(void)
  * @brief Hypercall to implement return from system calls
  *
  * @detailed
- * The user have changed the registers for the USER mode
- * on returning from system call
+ * The scheduled domain setup shared page USER mode registers
+ * before calling syscall_return
  */
 int hyp_syscall_return(void)
 {
 	struct shared_page *s = current->sp;
 	unsigned long retval;
-	struct context *ctx = &s->context_usr;
 
 	retval = s->context_usr.regs.regs[0];
 	debhyp("retval: %08lx\n", retval);
 
         event_new(EVT_SYSRET);
 
-	debinfo("========= syscall %d (%x)  SPSR   0x%08lx  PC 0x%08lx=======\n", s->v_syscall, s->v_syscall, ctx->sregs.spsr, ctx->sregs.pc);
+	debinfo("syscall %d\n", s->v_syscall);
 	current->ctx_level++;	/* We restore from another mode */
 	mode_restore(current);
 
         current->flags &= ~DFLAGS_HYPCALL;
 
+	//debinfo("PC %08lx R0 %08lx\n", ctx->sregs.pc, ctx->regs.regs[0]);
+	show_ctx(&current->ctx);
         context_restore();
         switch_to();
 
@@ -454,12 +455,16 @@ int hyp_console(void)
  */
 int hyp_usr_return(void)
 {
+
         event_new(EVT_USRRET);
         current->flags &= ~DFLAGS_HYPCALL;
 
 	debinfo("\n");
+
 	current->ctx_level++;	/* We restore from another mode */
 	mode_set(current, DMODE_USR);
+
+	show_ctx(&current->ctx);
 
         context_restore();
         switch_to();

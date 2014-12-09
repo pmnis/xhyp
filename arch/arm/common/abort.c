@@ -100,9 +100,9 @@ void do_abort(unsigned long far, unsigned long dfsr)
 {
 	struct shared_page *s = current->sp;
 
-	debinfo("pc  : %08lx\n", _context->sregs.pc);
-	debinfo("dfsr: %08lx\n", dfsr);
-	debinfo("far : %08lx\n", far);
+	debabt("pc  : %08lx\n", _context->sregs.pc);
+	debabt("dfsr: %08lx\n", dfsr);
+	debabt("far : %08lx\n", far);
 /*
 	debabt("lr  : %08lx\n", _context->sregs.lr);
 	debabt("sp  : %08lx\n", _context->sregs.sp);

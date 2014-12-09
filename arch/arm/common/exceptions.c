@@ -135,10 +135,10 @@ void exp_data_abrt(void)
 	}
 
 	instr = (unsigned long *) dom_virt_to_hyp(current, _context->sregs.pc);
-	debinfo("Instruction %08lx at %08lx : %08lx\n", _context->sregs.pc, instr, *instr);
+	debabt("Instruction %08lx at %08lx : %08lx\n", _context->sregs.pc, instr, *instr);
 	if (!(*instr & (1 << 20))) {
 		fsr |= XHYP_FLT_WRITE;
-		debinfo("XHYP_FLT_WRITE\n");
+		debabt("XHYP_FLT_WRITE\n");
 	}
 
 	if (current->ctx_level) {
@@ -165,14 +165,14 @@ void exp_prefetch(void)
 	unsigned long dfsr;
 	unsigned long fsr;
 
-	debinfo("PC at %08lx\n", _context->sregs.pc);
+	debabt("PC at %08lx\n", _context->sregs.pc);
 
 	debctx("\n");
 	//context_save();
 	event_new(EVT_ABT);
 
         dfsr = _get_dfsr();
-	debinfo("DFSR: %08lx\n", dfsr);
+	debabt("DFSR: %08lx\n", dfsr);
         //dfsr = 5;	/* Say it is a page fault */
 
 	fsr = XHYP_FLT_PREFETCH;
