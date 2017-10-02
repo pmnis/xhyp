@@ -33,4 +33,10 @@ source "arch/x86/Kconfig"
 
 source "kernel/Kconfig"
 
+config PREFIX
+        string "Cross compilator prefix"
+        default "arm-linux-"
+        help
+	  define the cross compiler prefix
+
 

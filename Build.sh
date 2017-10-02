@@ -3,8 +3,7 @@
 BASE=$(pwd)
 export INCLUDE=${BASE}/include
 
-CROSS_COMPILE=${CROSS_COMPILE:-arm-linux-}
-export CROSS_COMPILE
+
 
 # try find the board
 [[ -r .config ]] && source ./.config
@@ -17,7 +16,21 @@ export CROSS_COMPILE
 # set defaults
 export ARCH=${ARCH:-arm}
 export BOARD=${BOARD:-versatile}
+export CROSS_COMPILE
 
+[[ ${ARCH} ]] && [[ ! ${CROSS_COMPILE} ]] && {
+	print "Unknown compiler for architecture $ARCH"
+	print "Please export CROSS_COMPILE"
+	exit 1
+	}
+
+[[ $(whence ${CROSS_COMPILE}gcc) ]] || {
+	print "I did not find ${CROSS_COMPILE}gcc in $PATH"
+	print "Please setup your PATH"
+	exit 1
+}
+
+print "Using compiler ${CROSS_COMPILE}gcc for architecture $ARCH"
 export DEBFLGS="-g"
 
 # export tool chain you find in toolchain.inc
