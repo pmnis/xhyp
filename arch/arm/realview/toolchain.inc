@@ -1,14 +1,5 @@
 #!/bin/ksh
 
-PATH=$PATH:/root/armbin:/root/armbin.linaro/
-
-export CROSS_COMPILE=arm-linux-gnueabihf-
-export CROSS_COMPILE=arm-linux-gnueabihf-
-
-export CC=${CROSS_COMPILE}gcc
-export LD=${CROSS_COMPILE}ld
-export AS=${CROSS_COMPILE}as
-export OBJCOPY=${CROSS_COMPILE}objcopy
 export ABI="aapcs-linux"
 export ABI="iwmmxt"
 export ABI="atpcs"

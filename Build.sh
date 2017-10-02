@@ -17,6 +17,11 @@ export INCLUDE=${BASE}/include
 export ARCH=${ARCH:-arm}
 export BOARD=${BOARD:-versatile}
 export CROSS_COMPILE
+export CC=${CROSS_COMPILE}gcc
+export LD=${CROSS_COMPILE}ld
+export AS=${CROSS_COMPILE}as
+export OBJCOPY=${CROSS_COMPILE}objcopy
+
 
 [[ ${ARCH} ]] && [[ ! ${CROSS_COMPILE} ]] && {
 	print "Unknown compiler for architecture $ARCH"
