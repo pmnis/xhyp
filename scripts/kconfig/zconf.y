@@ -461,7 +461,7 @@ void conf_parse(const char *name)
 	sym_init();
 	menu_init();
 	modules_sym = sym_lookup("MODULES", 0);
-	rootmenu.prompt = menu_add_prompt(P_MENU, "Xhyp Configuration", NULL);
+	rootmenu.prompt = menu_add_prompt(P_MENU, "X-Hyp Configuration", NULL);
 
 #if YYDEBUG
 	if (getenv("ZCONF_DEBUG"))

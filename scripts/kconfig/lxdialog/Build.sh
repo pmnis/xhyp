@@ -1,14 +1,8 @@
-#!/bin/ksh
+#!/bin/sh
 
-LDFLAGS=$(sh check-lxdialog.sh -ldflags gcc)
-CCFLAGS=$(sh check-lxdialog.sh -ccflags gcc)
-
-
-function build_it
+build_it()
 {
-gcc ${LDFLAGS} ${CCFLAGS} -o lxdialog \
-	checklist.c menubox.c textbox.c yesno.c inputbox.c \
-	util.c lxdialog.c msgbox.c 
+gcc -D_GNU_SOURCE -DCURSES_LOC="<ncurses.h>" -o lxdialog -I /usr/include checklist.c menubox.c textbox.c yesno.c inputbox.c util.c lxdialog.c msgbox.c -lncurses -ltinfo
 }
 
 case $1 in
@@ -19,7 +13,3 @@ case $1 in
 		build_it
 		;;
 esac
-exit 0
-gcc ${LDFLAGS} ${CCFLAGS} -DCURSES_LOC="<ncurses.h>" -o lxdialog \
-	checklist.c menubox.c textbox.c yesno.c inputbox.c \
-	util.c lxdialog.c msgbox.c 

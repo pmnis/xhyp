@@ -9,6 +9,8 @@
  */
 
 #define _XOPEN_SOURCE 700
+/* On Darwin, this may be needed to get SIGWINCH: */
+#define _DARWIN_C_SOURCE 1
 
 #include <sys/ioctl.h>
 #include <sys/wait.h>
@@ -32,7 +34,7 @@ static char menu_backtitle[128];
 static const char mconf_readme[] = N_(
 "Overview\n"
 "--------\n"
-"Some features may be built directly into Xhyp.\n"
+"Some features may be built directly into busybox.\n"
 "Some may be made into standalone applets.  Some features\n"
 "may be completely removed altogether.  There are also certain\n"
 "parameters which are not really features, but must be\n"
@@ -443,6 +445,7 @@ static struct gstr get_relations_str(struct symbol **sym_arr)
 
 pid_t pid;
 
+#ifdef SIGWINCH
 static void winch_handler(int sig)
 {
 	if (!do_resize) {
@@ -450,11 +453,11 @@ static void winch_handler(int sig)
 		do_resize = 1;
 	}
 }
+#endif
 
 static int exec_conf(void)
 {
 	int pipefd[2], stat, size;
-	struct sigaction sa;
 	sigset_t sset, osset;
 
 	sigemptyset(&sset);
@@ -463,10 +466,15 @@ static int exec_conf(void)
 
 	signal(SIGINT, SIG_DFL);
 
-	sa.sa_handler = winch_handler;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_RESTART;
-	sigaction(SIGWINCH, &sa, NULL);
+#ifdef SIGWINCH
+	{
+		struct sigaction sa;
+		sa.sa_handler = winch_handler;
+		sigemptyset(&sa.sa_mask);
+		sa.sa_flags = SA_RESTART;
+		sigaction(SIGWINCH, &sa, NULL);
+	}
+#endif
 
 	*argptr++ = NULL;
 
@@ -1056,7 +1064,7 @@ int main(int ac, char **av)
 
 	sym = sym_lookup("KERNELVERSION", 0);
 	sym_calc_value(sym);
-	sprintf(menu_backtitle, _("Xhyp %s Configuration"),
+	sprintf(menu_backtitle, _("BusyBox %s Configuration"),
 		sym_get_string_value(sym));
 
 	mode = getenv("MENUCONFIG_MODE");

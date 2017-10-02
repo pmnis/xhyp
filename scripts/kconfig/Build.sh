@@ -1,4 +1,4 @@
-#!/bin/ksh
+#!/usr/bin/ksh
 
 function build_it
 {
