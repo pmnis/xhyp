@@ -7,3 +7,9 @@ include/autoconf.h
 setpte.txt
 .config
 doit.sh
+*cmd
+domains/
+generated/
+xhyp.ld
+lxdialog
+mconf
