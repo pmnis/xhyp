@@ -32,6 +32,7 @@ char cmd_buffer[MAX_BUF];
 char colors[10] = "0m";
 #define COLOR_BLACK     "[30m"
 #define COLOR   "[3"
+int color_on = 0;
 
 int show_domain[NB_QUEUING_PORT];
 
@@ -179,10 +180,12 @@ int cmd_major_get(char *s, char *args)
 		for (i = 0; i < mf.minor_count; i++) {
 			f = &mf.minor[i];
 			colors[0] = '0' + f->dom_id;
-			printk("%s%s", COLOR, colors);
+			if (color_on)
+				printk("%s%s", COLOR, colors);
 			printk("[%02d] %3d %5d %4d\n", i, f->dom_id, f->slot_start, f->slot_size);
 		}
-	printk(COLOR_BLACK);
+	if (color_on)
+		printk(COLOR_BLACK);
 	}
 	return 0;
 }
@@ -229,7 +232,8 @@ int cmd_ps(char *s, char *args)
 	for (i = 0; i < NB_DOMAINS; i++) {
 		if (_hyp_hyp(HYPCMD_DOM_GET, i, &d)) {
 			colors[0] = '0' + i;
-			printk("%s%s", COLOR, colors);
+			if (color_on)
+				printk("%s%s", COLOR, colors);
 			printk("[%2d] %2s %2s",
 				i, ps_str_type[d.type], ps_str_state(d.state));
 			printk(" %2d", d.prio);
@@ -243,7 +247,8 @@ int cmd_ps(char *s, char *args)
 			printk("\n");
 		}
 	}
-	printk(COLOR_BLACK);
+	if (color_on)
+		printk(COLOR_BLACK);
 	return 0;
 }
 
@@ -259,7 +264,8 @@ int cmd_psl(char *s, char *args)
 	for (i = 0; i < NB_DOMAINS; i++) {
 		if (_hyp_hyp(HYPCMD_DOM_GET, i, &d)) {
 			colors[0] = '0' + i;
-			printk("%s%s", COLOR, colors);
+			if (color_on)
+				printk("%s%s", COLOR, colors);
 			printk("[%2d] %2s %2s %2s %2s",
 				i, ps_str_type[d.type], ps_str_state(d.state),
 				ps_str_mode[d.mode], ps_str_mode[d.old_mode]);
@@ -275,7 +281,8 @@ int cmd_psl(char *s, char *args)
 			printk("\n");
 		}
 	}
-	printk(COLOR_BLACK);
+	if (color_on)
+		printk(COLOR_BLACK);
 	return 0;
 }
 
@@ -450,9 +457,11 @@ void poll_qports(void )
 		while ((n = fifo_get(&qp->fifo, fifo_buffer, 64)) > 0) {
 			fifo_buffer[n] = 0;
 			colors[0] = '0' + qp->remote;
-			printk("%s%s", COLOR, colors);
+			if (color_on)
+				printk("%s%s", COLOR, colors);
 			printk(fifo_buffer);
-			printk(COLOR_BLACK);
+			if (color_on)
+				printk(COLOR_BLACK);
 		}
 		_hyp_preempt_enable();
 	}
@@ -541,14 +550,16 @@ void start_kernel(void)
 	IRQ_mask(f);
 
 	colors[0] = '4';
-	printk("%s%s", COLOR, colors);
+	if (color_on)
+		printk("%s%s", COLOR, colors);
 	printk("x-hyp: color demo serial interface started SP: %08lx\n", xhyp_sp);
         printk("Shared page: %08lx\n", xhyp_sp->magic);
 	if (xhyp_sp->magic != XHYP_SP_MAGIC) {
 		printk("BAD MAGIC\n");
 		while (1) {IRQ_mask(-1); _hyp_idle(); }
 	}
-	printk(COLOR_BLACK);
+	if (color_on)
+		printk(COLOR_BLACK);
 	serial_init();
 
 	printk("Hello\n");
