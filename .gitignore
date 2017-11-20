@@ -1,3 +1,4 @@
+TBD
 .config.old
 .kconfig.d
 os/linux_32M
@@ -13,3 +14,10 @@ generated/
 xhyp.ld
 lxdialog
 mconf
+*.o
+*.s
+*.swp
+*.a
+cscope*
+*.dom
+xhyp*
