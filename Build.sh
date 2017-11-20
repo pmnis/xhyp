@@ -139,8 +139,10 @@ where option is one of
 
 function build_cscope
 {
-	find . -name "*.c" -o -name "*.S" -o -name "*.h" | egrep -v ".pc|.git"> files.in
-	cscope -I ./include -k -b -i files.in
+	find  . -type f -name "*.c"  > cscope.files 
+	find  . -type f -name "*.S"  >> cscope.files 
+	find  . -type f -name "*.h"  >> cscope.files
+	cscope -I ./include -k -b -icscope.files
 }
 
 function build_doc
