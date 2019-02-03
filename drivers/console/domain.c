@@ -57,6 +57,7 @@ int cmd_help(char *s, char *args)
 	printk("events      : per domain events count\n");
 	printk("ag          : get current ARINC plan\n");
 	printk("as          : set new ARINC plan\n");
+	printk("color       : set coloring\n");
 	return 0;
 }
 
@@ -286,11 +287,29 @@ int cmd_psl(char *s, char *args)
 	return 0;
 }
 
+int cmd_color(char *s, char *args)
+{
+	int val;
+	int n;
+
+	if (!args)
+		return 0;
+
+	n = sscanf(args, "%d", &val);
+	if (n != 1) {
+		printk("Erreur : bad arg %s\n", args);
+		return 1;
+	}
+	color_on = (val)? 1 : 0;
+	return 0;
+}
+
 int cmd_events(char *s, char *args)
 {
 	_hyp_hyp(HYPCMD_EVENTS, 0, NULL);
 	return 0;
 }
+
 int togle(int on, char *args)
 {
 	int id;
@@ -369,6 +388,7 @@ int cmd_dmesg(char *s, char *args)
 struct command command[] = {
 	{"help",	cmd_help},
 	{"events",	cmd_events},
+	{"color",	cmd_color},
 	{"show",	cmd_show},
 	{"qport",	cmd_fifo},
 	{"ps",		cmd_ps},
