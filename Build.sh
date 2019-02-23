@@ -16,7 +16,7 @@ export INCLUDE=${BASE}/include
 # set defaults
 export ARCH=${ARCH:-arm}
 export BOARD=${BOARD:-versatile}
-export CROSS_COMPILE
+[[ ${ARCH} =~ arm ]] && export CROSS_COMPILE=${CROSS_COMPILE:-arm-linux-}
 export CC=${CROSS_COMPILE}gcc
 export LD=${CROSS_COMPILE}ld
 export AS=${CROSS_COMPILE}as
