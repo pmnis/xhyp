@@ -1,5 +1,7 @@
 #!/bin/ksh
 
+[[ $CONFIG_QPORT_CONSOLE ]] || exit 0
+
 PATH=$PATH:/root/armbin
 BASE=$(pwd)
 export INCLUDE=${BASE}/include

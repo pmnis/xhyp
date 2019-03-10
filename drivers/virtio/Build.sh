@@ -1,5 +1,7 @@
 #!/bin/ksh
 
+[[ $CONFIG_VIRTIO_CONSOLE ]] || exit 0
+
 BASE=$(pwd)
 export INCLUDE=${BASE}/include
 export CC=${CROSS_COMPILE}gcc

@@ -6,7 +6,7 @@
 #include <xhyp/domains.h>
 #include <xhyp/hyp.h>
 #include <xhyp/event.h>
-#include <xhyp/virtio.h>
+#include <sys/virtio.h>
 
 #include <xhyp/arinc.h>
 

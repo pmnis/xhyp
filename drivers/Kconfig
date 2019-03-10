@@ -1,10 +1,15 @@
 
 menu 'Secure Drivers'
 
-config CONSOLE
-	bool "console"
+config QPORT_CONSOLE
+	bool "Qport console"
 	help
-	  XHYP console
+	  XHYP qport console
+
+config VIRTIO_CONSOLE
+	bool "Virtio console"
+	help
+	  XHYP virtio console
 
 config NETWORK
 	bool "network"

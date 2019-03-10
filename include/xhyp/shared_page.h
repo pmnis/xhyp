@@ -23,8 +23,10 @@
 #ifndef __SHARED_PAGE_H
 #define __SHARED_PAGE_H
 
+#include <autoconf.h>
 #include <xhyp/context.h>
 #include <sys/ports.h>
+#include <sys/virtio.h>
 
 #define NB_QUEUING_PORT	4*16
 #define XHYP_SP_MAGIC	0xCAFEC0CA
@@ -52,7 +54,12 @@ struct shared_page {
 	unsigned long 	v_irq_mask;
 	unsigned long	reserved[10];
 	unsigned long	sampling_port;
+#ifdef CONFIG_QPORT_CONSOLE
 	struct queuing_port	qp[NB_QUEUING_PORT];
+#endif
+#ifdef CONFIG_VIRTIO_CONSOLE
+	struct virtio_ring	virtio_ring;
+#endif
 	unsigned long	end_magic;
 };
 

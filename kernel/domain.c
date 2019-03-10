@@ -227,6 +227,7 @@ void sp_update(struct shared_page * sp)
  */
 void driver_init(struct domain *d)
 {
+#ifdef CONFIG_QPORT_CONSOLE
 	struct shared_page *s = d->sp;
 	struct queuing_port *qp;
 	int i;
@@ -236,6 +237,7 @@ void driver_init(struct domain *d)
 		qp++;
 		queuing_port_init(qp, QPORT_OUT);
 	}
+#endif
 }
 
 /** @fn void shared_page_init(struct domain *d)

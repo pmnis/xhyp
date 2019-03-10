@@ -18,7 +18,12 @@ OBJS += sched_arinc.o
 endif
 
 OBJS += hypercalls.o mm.o tag.o 
-OBJS +=	copypage.o io.o event.o
+OBJS +=	copypage.o event.o
+
+ifeq ("$(CONFIG_QPORT_CONSOLE)", "y")
+OBJS += io.o
+endif
+
 
 xhyp.a: $(OBJS)
 	ar r ../lib/xhyp.a $(OBJS)

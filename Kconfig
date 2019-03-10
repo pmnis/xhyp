@@ -39,4 +39,4 @@ config PREFIX
         help
 	  define the cross compiler prefix
 
-
+source "drivers/Kconfig"
