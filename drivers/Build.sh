@@ -1,7 +1,7 @@
 #!/bin/ksh
 
 
-for dir in serial block network console
+for dir in serial block network console virtio
 do
 	[[ -d ${dir} ]] || continue
 	print "	- ${dir}"
