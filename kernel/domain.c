@@ -228,15 +228,10 @@ void sp_update(struct shared_page * sp)
 void driver_init(struct domain *d)
 {
 #ifdef CONFIG_QPORT_CONSOLE
-	struct shared_page *s = d->sp;
-	struct queuing_port *qp;
-	int i;
-
-	for (i = 0, qp = s->qp; i < (NB_QUEUING_PORT/2); i++, qp++) {
-		queuing_port_init(qp, QPORT_IN);
-		qp++;
-		queuing_port_init(qp, QPORT_OUT);
-	}
+	qp_console_init(d);
+#endif
+#ifdef CONFIG_VIRTIO_CONSOLE
+	virtio_console_init(d);
 #endif
 }
 

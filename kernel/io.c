@@ -273,3 +273,16 @@ void console_init(void)
 	}
 
 }
+
+void qp_console_init(struct domain *d)
+{
+	struct shared_page *s = d->sp;
+	struct queuing_port *qp;
+	int i;
+
+	for (i = 0, qp = s->qp; i < (NB_QUEUING_PORT/2); i++, qp++) {
+		queuing_port_init(qp, QPORT_IN);
+		qp++;
+		queuing_port_init(qp, QPORT_OUT);
+	}
+}

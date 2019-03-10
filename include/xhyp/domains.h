@@ -238,6 +238,7 @@ extern void mode_new(struct domain *d, int mode);
 extern void mode_save(struct domain *d, int mode);
 extern void mode_set(struct domain *d, int mode);
 extern void mode_restore(struct domain *d);
+void qp_console_init(struct domain *d);
 
 #endif
 
