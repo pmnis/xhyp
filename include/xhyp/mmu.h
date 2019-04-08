@@ -48,7 +48,7 @@
 #define PT_SIZE PTE_PER_CTE * CT_SIZE   /* This is fixed by ARM926EJS   */ 
 
 
-#ifndef __ASSEMBLY__
+#ifndef __ASSEMBLER__
 
 
 extern void prepare_mmu_flat(void);

@@ -38,7 +38,7 @@
 #include <xhyp/generated.h>
 #include <xhyp/pages.h>
 
-#ifndef __ASSEMBLY__
+#ifndef __ASSEMBLER__
 extern unsigned long periph_base;
 
 #define MEMORY_SIZE	CONFIG_MEMORY_SIZE

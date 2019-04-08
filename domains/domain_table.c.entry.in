@@ -1,0 +1,20 @@
+        {
+        .name = "${name}",
+        .base_addr = ${base},
+        .sp = (struct shared_page *)${base},
+        .tags_addr = ${base} + 0x4000,
+        .size       = ${size},
+        .flags      = ${flags},
+        .state      = ${state},
+        .type       = ${dom_type},
+        .d_drv_type = ${drv_type},
+        .prio = ${prio},
+        .id = ${DOM_ID},
+        .load_addr  = ${start},
+        .vbase_addr = 0x02000000, /* FIXME Hardcoded */
+        .start_addr = 0x02100000, /* FIXME Hardcoded */
+        .offset = ${offset},
+        .device = ${device},
+        .device_size = ${device_size},
+        .mode = DMODE_SVC,
+        },

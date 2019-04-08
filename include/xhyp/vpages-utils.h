@@ -24,7 +24,7 @@
 #ifndef __VPAGES_UTILS_H
 #define __VPAGES_UTILS_H
 
-#ifndef __ASSEMBLY__
+#ifndef __ASSEMBLER__
 
 #include <xhyp/domains.h>
 extern unsigned long pt_level1;

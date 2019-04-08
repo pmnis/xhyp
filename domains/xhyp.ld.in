@@ -1,0 +1,56 @@
+OUTPUT_FORMAT("elf32-littlearm", "elf32-littlearm", "elf32-littlearm")
+OUTPUT_ARCH(arm)
+ENTRY(_start)
+
+MEMORY
+{
+  vecteurs : org = 0x00000000, l = 0x00007000
+  context  : org = 0x00007000, l = 0x00001000
+  ram      : org = 0x00008000, l = 0x01ff8000
+@MEMORY_LAYOUT@
+}
+PHDRS
+{
+  vect PT_LOAD;
+  text PT_LOAD;
+@PHDRS@
+}
+
+
+SECTIONS
+{
+        . = 0x00000000;
+
+        . = ALIGN(4);
+        .vect :
+        {
+                *start.S.o   (.text)
+        } > vecteurs : vect
+        .text :
+        {
+                *main.c.o     (.text)
+                *(.text)
+                *(.glue_7t)
+                *(.glue_7)
+        } > ram : text
+
+
+        . = ALIGN(4);
+        .rodata : { *(.rodata) } > ram
+
+        . = ALIGN(4);
+        __data_start = .;
+        .data : { *(.data) } > ram
+        __data_end = .;
+
+        . = ALIGN(4);
+        __bss_start = .;
+        .bss : { *(.bss) } > ram
+        __bss_end = .;
+
+        __hyp_end = .;
+
+@SECTIONS@
+__end_of_all = . ;
+}
+

@@ -1,4 +1,0 @@
-
-
-comment "PLATFORM NOT YET SUPPORTED"
-	depends on LEON

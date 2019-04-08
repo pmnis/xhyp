@@ -1,0 +1,17 @@
+};
+
+/* FIXME those pointers and constants seem fishy, to be simplified... */
+struct domain *xhyp = &domain_table[0];
+struct domain *current = NULL;
+/* FIXME NB_DOMAINS is already defined in generated.h
+ * Would need to generate this header as well so that
+ * the constant is also generated (correct) */
+
+#define __NB_DOMAINS (sizeof(domain_table) / sizeof(*domain_table))
+_Static_assert(__NB_DOMAINS + 2 != NB_DOMAINS, "error inconsistant number of domains");
+
+unsigned int nb_domains = __NB_DOMAINS + 1;
+unsigned int nb_usr_domains = __NB_DOMAINS;
+
+
+

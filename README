@@ -19,19 +19,31 @@ This file gives you informations about using the xhyp hypervisor
 ===============================================================================
 	0) configure xhyp
 
-First of all you need to configure xhyp.
-use: 
-# ./Build.sh menuconfig
+You need to have your cross compiler in your PATH, or add it manyally.
+If you prefere, you can tweak the cmake toolchain file in the source directory
+to point to your compiler.
 
-The first time, you will need the ncurses developpement package
-to be able to uild the menu itself.
+Then, create a build directory somewhere and invoke cmake from it:
+
+$ mkdir build && cd build
+$ cmake /path/to/sources/
+
+The default configuration should be ok for an overview; use ccmake or cmake-gui
+to tune basic configuration.
+
+from build directory
+$ ccmake .
+
+or
+
+$ cmake-gui .
 
 ===============================================================================
 	1) configure xhyp with guest domains
 
 Use the config.domains file in the domains directory
 you will find informations on the structure of the file
-on the xhyp web site: http://xhyp.org/
+on the xhyp web site: http://x-hyp.org/
 
 The configuration should be obvious.
 
@@ -41,31 +53,22 @@ Use defaults domains you will find on the web site at
 or build your own domain using informations at
 	http://xhyp.org/support/documentation/
 
+For adding precompiled os, you need to add your os in the os directory in
+sources, and adapt the CMakeLists.txt in there to copy the os to the
+compilation tree.
+
 
 ===============================================================================
 	2) build xhyp core
 
-You need to use the Build.sh script.
-In this file is an include file depending on the architecture
-you will find it in the directory arch/${ARCH}/${BOARD}
+Just run "make" in your build directory once configuration (cmake stage) is
+done.
 
-Actually there is only one architecture, arm, and one
-board supported, versatile.
+For now, arm is the only one architecture hanled, and "versatile" the only
+board supported.
 
 in this file, toolchain.inc you will probably need to change
 the cross compiler prefix and the PATH to find it.
-
-like:
-PATH=$PATH:/root/armbin
-export CROSS_COMPILE=${CROSS_COMPILE:-arm-none-linux-gnueabi-}
-
-you may also need to change appropriate options for C flags and
-assembler flags if you choose another cross compiler.
-
-Then you hopefully just need to start building xhyp with:
-
-# ./Build.sh
-
 
 ===============================================================================
 
@@ -89,9 +92,10 @@ compute a binary to include in the x-hyp image.
 For example for Linux:
 
         LINUX=${LINUX_BASE}/vmlinux
-        ${CROSS_COMPILE}objcopy $LINUX -O  binary os/linux.bin
+        your-custom-objcopy $LINUX -O  binary os/linux.bin
 
-You must of course first initialize the LINUX and CROSS_COMPILE variables.
+Then adapt the CMakeLists.txt in there to copy the os to the
+compilation tree.
 
 then add the configuration in the domains/config.domains file
 For example for Linux:

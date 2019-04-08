@@ -19,7 +19,7 @@ SECTIONS
 
 	. = ALIGN(4);
 	.text : {
-		main.o (.text)
+		*main.S.o (.text)
 		* (.text)
 		* (.data)
 		* (.rodata)

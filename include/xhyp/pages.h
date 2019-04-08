@@ -108,7 +108,7 @@
 #define PMD_SIZE	NB_PTE_ENTRIES * sizeof(unsigned long)
 #define MAX_MMU_TABLE_SIZE	PGD_SIZE + NB_SECTIONS_ENTRIES * PMD_SIZE
 
-#ifndef __ASSEMBLY__
+#ifndef __ASSEMBLER__
 
 /*
  * A real address is calculated from virtual address as
