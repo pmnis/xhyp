@@ -164,6 +164,10 @@ function build_doc
 [[ $1 == "doc" ]] && build_doc && exit 0
 
 [[ -r .config ]] || {
+	build_config
+}
+
+[[ -r .config ]] || {
 	print "Please configure using ./Build.sh config"
 	exit 1
 }
