@@ -9,6 +9,8 @@
 
 #include <xhyp/arinc.h>
 
+#include <colors.h>
+
 #include <autoconf.h>
 
 #include "hyp.h"
@@ -30,8 +32,6 @@ extern int _hyp_hyp(int cmd, int nb, void *);
 char fifo_buffer[MAX_BUF];
 char cmd_buffer[MAX_BUF];
 char colors[10] = "0m";
-#define COLOR_BLACK     "[30m"
-#define COLOR   "[3"
 int color_on = 0;
 
 int show_domain[NB_QUEUING_PORT];
@@ -185,8 +185,7 @@ int cmd_major_get(char *s, char *args)
 				printk("%s%s", COLOR, colors);
 			printk("[%02d] %3d %5d %4d\n", i, f->dom_id, f->slot_start, f->slot_size);
 		}
-	if (color_on)
-		printk(COLOR_BLACK);
+	reset_color();
 	}
 	return 0;
 }
@@ -248,8 +247,7 @@ int cmd_ps(char *s, char *args)
 			printk("\n");
 		}
 	}
-	if (color_on)
-		printk(COLOR_BLACK);
+	reset_color();
 	return 0;
 }
 
@@ -282,8 +280,7 @@ int cmd_psl(char *s, char *args)
 			printk("\n");
 		}
 	}
-	if (color_on)
-		printk(COLOR_BLACK);
+	reset_color();
 	return 0;
 }
 
@@ -480,8 +477,7 @@ void poll_qports(void )
 			if (color_on)
 				printk("%s%s", COLOR, colors);
 			printk(fifo_buffer);
-			if (color_on)
-				printk(COLOR_BLACK);
+			reset_color();
 		}
 		_hyp_preempt_enable();
 	}
@@ -578,8 +574,7 @@ void start_kernel(void)
 		printk("BAD MAGIC\n");
 		while (1) {IRQ_mask(-1); _hyp_idle(); }
 	}
-	if (color_on)
-		printk(COLOR_BLACK);
+	reset_color();
 	serial_init();
 
 	printk("Hello\n");

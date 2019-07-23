@@ -36,6 +36,8 @@
 #include <xhyp/ring.h>
 #include <xhyp/event.h>
 
+#include <colors.h>
+
 /** @file event.c
  * @brief event management
  */

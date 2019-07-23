@@ -95,8 +95,5 @@ extern void dump_pgd(unsigned long *p);
 
 extern int PANIC;
 
-#define COLOR_BLACK     "[30m"
-#define COLOR   "[3"
-
 #endif
 

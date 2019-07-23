@@ -37,6 +37,8 @@
 #include <xhyp/mm.h>
 #include <xhyp/serial.h>
 
+#include <colors.h>
+
 #ifdef CONFIG_SCHED_ARINC
 #include <xhyp/arinc.h>
 #endif
@@ -445,7 +447,7 @@ int hyp_console(void)
 	serial_write(COLOR, 3);
 	serial_write(colors, 2);
 	serial_write(s, n);
-	serial_write(COLOR_BLACK, 5);
+	serial_write(COLOR_WHITE, 5);
 	return n - 1;
 }
 /** fn int hyp_usr_return(void)
