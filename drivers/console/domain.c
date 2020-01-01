@@ -32,7 +32,7 @@ extern int _hyp_hyp(int cmd, int nb, void *);
 char fifo_buffer[MAX_BUF];
 char cmd_buffer[MAX_BUF];
 char colors[10] = "0m";
-int color_on = 0;
+int color_on = 1;
 
 int show_domain[NB_QUEUING_PORT];
 
