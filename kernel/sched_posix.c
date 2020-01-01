@@ -45,7 +45,8 @@ static void sched_init(void)
 	list_init(&sleep_queue);
 }
 
-/* These are called from interrupt context
+/*
+ * These are called from interrupt context
  * static void sched_add_to_sleepq(struct domain *d)
  * static void sched_add_from_sleepq(struct domain *d)
  */
@@ -67,41 +68,52 @@ static void sched_add_from_sleepq(struct domain *d)
 
 static void sched_add(struct domain *d)
 {
-	d->state = DSTATE_READY;
 	debsched("adding %d\n", d->id);
+
+	d->state = DSTATE_READY;
 	list_add_tail(&d->list, &runqueue.list[d->prio]);
 	runqueue.bitmap |= 0x01 << d->prio ;
+
 	debsched("runqueue.bitmap: %08lx\n", runqueue.bitmap);
 }
 
 static void sched_delete(struct domain *d)
 {
-	d->state = DSTATE_DEAD;
 	debsched("delete %d\n", d->id);
+
+	d->state = DSTATE_DEAD;
 	list_del(&d->list);
 	list_init(&d->list);
-	if (list_empty(&runqueue.list[d->prio])) {
+
+	if (list_empty(&runqueue.list[d->prio]))
 		runqueue.bitmap &= ~(0x01 << d->prio );
-	}
+
 	if (d == current)
 		context_save();
 }
 
 static inline void print_state (struct domain *d)
 {
-	if (!(debug_level & DEB_SCHED)) return;
+	if (!(debug_level & DEB_SCHED))
+		return;
 
-	printk("[%d] : ", d->id);
-	if (d->state == DSTATE_RUN) printk("R");
-	else printk(".");
-	if (d->state == DSTATE_SLEEP) printk("S");
-	else printk(".");
-	if (d->state == DSTATE_READY) printk("Y");
-	else printk(".");
-	if (d->state == DSTATE_DEAD) printk("D");
-	else printk(".");
-	if (d->state == DSTATE_STOP) printk("P");
-	else printk(".");
+	switch (d->state) {
+	case DSTATE_RUN:
+		printk("[%d] : R", d->id);
+		break;
+	case DSTATE_SLEEP:
+		printk("[%d] : S", d->id);
+		break;
+	case DSTATE_READY:
+		printk("[%d] : Y", d->id);
+		break;
+	case DSTATE_DEAD:
+		printk("[%d] : D", d->id);
+		break;
+	case DSTATE_STOP:
+		printk("[%d] : P", d->id);
+		break;
+	}
 	printk(" [%08lx][%08lx]", d->sp->v_irq_pending, d->sp->v_irq_enabled);
 	printk("\n");
 }
@@ -112,6 +124,7 @@ static void sched_show_d(void)
 
 	d1 = (struct domain *)(runqueue.list[8].next);
 	d2 = (struct domain *)(runqueue.list[8].next->next);
+
 	debsched("first %d next %d\n", d1->id, d2->id);
 }
 
@@ -141,7 +154,6 @@ static int sched_get(void)
 	struct domain *d;
 
 	current = idle_domain;
-	//context_trace(&domain_table[4].ctx);
 	for (i=0; i< 32; i++) {
 		if (runqueue.bitmap & (0x01 << i)) {
 			if (list_empty(&runqueue.list[i]))
@@ -162,7 +174,8 @@ static int sched_get(void)
 
 static void sched_sleep(struct domain *d)
 {
-	if (d->id > 0 ) debsched("\n");
+	if (d->id > 0 )
+		debsched("\n");
 	sched_delete(d);
 	sched_add_to_sleepq(d);
 	schedule();
@@ -170,14 +183,16 @@ static void sched_sleep(struct domain *d)
 
 static void sched_kill(struct domain *d)
 {
-	if (d->id > 0 ) debsched("\n");
+	if (d->id > 0 )
+		debsched("\n");
 	sched_delete(d);
 	schedule();
 }
 
 static void sched_stop(struct domain *d)
 {
-	if (d->id > 0 ) debsched("\n");
+	if (d->id > 0 )
+		debsched("\n");
 	sched_delete(d);
 	d->state = DSTATE_STOP;
 	schedule();
@@ -185,7 +200,6 @@ static void sched_stop(struct domain *d)
 
 static void sched_yield(void)
 {
-	if (current->id > 0 ) debsched("\n");
 	debsched("\n");
 	sched_delete(current);
 	sched_add(current);
@@ -203,7 +217,8 @@ static void sched_wakeup(struct domain *d)
 	case DMODE_SVC:
 	case DMODE_USR:
 		s = d->sp;
-		debsched("E %08lx P %08lx M %08lx\n", s->v_irq_enabled, s->v_irq_pending, s->v_irq_mask);
+		debsched("E %08lx P %08lx M %08lx\n", s->v_irq_enabled,
+			 s->v_irq_pending, s->v_irq_mask);
 		if (s->v_irq_enabled & s->v_irq_pending & ~s->v_irq_mask)
 			mode_new(d, DMODE_IRQ);
 	default:
@@ -229,7 +244,8 @@ static void sched_dom(struct domain *d)
 #ifdef CONFIG_SCHED_POLICY_RR
 static void sched_slice(void)
 {
-	if (!current->id) return;
+	if (!current->id)
+		return;
 	current->slices++;
 	current->allocated_slices--;
 	if (current->allocated_slices > 0)
