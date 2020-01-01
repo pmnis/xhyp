@@ -32,8 +32,7 @@
 
 void arinc_error(int i, char *reason)
 {
-	if (i >= 0) debsched("SLOT[%02d]: %s\n", i, reason);
-	else debsched("%s\n", reason);
+	debsched("SLOT[%02d]: %s\n", i, reason);
 	debpanic("STOP");
 	while(1);
 }
@@ -50,12 +49,14 @@ static void sched_init(void)
 	for (i = 0, t0 = 0; i < major->minor_count; i++) {
 		t1 = major->minor[i].slot_start;
 		debsched("%d: slot start: %d\n", i, t1);
-		if (t1 < t0) arinc_error(i, "BAD SLOT AT INIT");
+		if (t1 < t0)
+			arinc_error(i, "BAD SLOT AT INIT");
 		t0 = t1 + major->minor[i].slot_size;
 		debsched("%d: total size: %d\n", i, t0);
 	}
 	debsched("total size: %d\n", t0);
-	if (t0 > major->frame_size) arinc_error(-1, "MAJOR FRAME OVERFLOW");
+	if (t0 > major->frame_size)
+		arinc_error(-1, "MAJOR FRAME OVERFLOW");
 	debsched("%s ... ready\n", sched->name);
 }
 
@@ -169,7 +170,8 @@ static void sched_wakeup(struct domain *d)
 	case DMODE_SVC:
 	case DMODE_USR:
 		s = d->sp;
-		debsched("E %08lx P %08lx M %08lx\n", s->v_irq_enabled, s->v_irq_pending, s->v_irq_mask);
+		debsched("E %08lx P %08lx M %08lx\n", s->v_irq_enabled,
+			 s->v_irq_pending, s->v_irq_mask);
 		if (s->v_irq_enabled & s->v_irq_pending & ~s->v_irq_mask)
 			mode_new(d, DMODE_IRQ);
 	default:
