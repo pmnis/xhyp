@@ -58,7 +58,6 @@ int in_timer = 1;
 int timer_handler(int irq, unsigned long data)
 {
 	in_timer = 1;
-	jiffies++;
 	tval = timer->val;
 	debirq("%ld %lx\n", jiffies, tval);
 	timer->ctrl &= ~ SP804_ENABLE;

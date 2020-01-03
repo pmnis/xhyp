@@ -69,12 +69,13 @@ void time_tick(void)
 	int i;
 	struct domain *d;
 
+	jiffies++;
 	d = &domain_table[0];
-	d->jiffies++;
+	d->jiffies = jiffies;
 	for(i = 1; i < nb_domains; i++) {
 		d = &domain_table[i];
-		d->jiffies++;
-		d->sp->jiffies++;
+		d->jiffies = jiffies;
+		d->sp->jiffies = jiffies;
 	}
 	sched->slice();
 }
