@@ -56,6 +56,9 @@ for (( i = 1 ; i <= dom ; i++ )) {
 	printf "	.type = %s, \n" ${dom_type[$i]}
 	printf "	.d_drv_type = %s, \n" ${drv_type[$i]}
 	printf "	.prio = %s, \n" ${prio[$i]}
+	printf "	.budget = %s, \n" ${bud[$i]}
+	printf "	.period = %s, \n" ${per[$i]}
+	printf "	.original_deadline = %s, \n" ${dead[$i]}
 	printf "	.id = %s, \n" $i
 	start=${base[$i]}
 	start=$(( start += ofst))
