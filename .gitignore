@@ -20,4 +20,6 @@ mconf
 *.a
 cscope*
 *.dom
-xhyp*
+xhyp
+xhyp.nm
+main
