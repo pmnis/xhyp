@@ -10,7 +10,7 @@ typeset -x ofst="0x00100000"
 	}
 
 {
-	while read name base virt size flgs prio state dom_type drv_type path
+	while read name base virt size flgs prio bud per dead state dom_type drv_type path
 	do
 		[[ ! ${name} || ${name: 0:1} == "#" ]] && continue
 		((dom++))
@@ -20,6 +20,9 @@ typeset -x ofst="0x00100000"
 		size[${dom}]=${size}
 		flgs[${dom}]=${flgs}
 		prio[${dom}]=${prio}
+		bud[${dom}]=${bud}
+		per[${dom}]=${per}
+		dead[${dom}]=${dead}
 		state[${dom}]=${state}
 		dom_type[${dom}]=${dom_type}
 		drv_type[${dom}]=${drv_type}
