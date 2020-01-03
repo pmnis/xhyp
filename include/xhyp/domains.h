@@ -124,6 +124,9 @@ struct domain {
 	unsigned long	prio;
 	int 		budget;
 	int		period;
+	int		slice_start;
+	int		deadline;
+	int		original_deadline;
 	int		allocated_slices;
 	unsigned long	jiffies;
 	unsigned long	irq;
