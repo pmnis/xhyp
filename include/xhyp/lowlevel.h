@@ -82,11 +82,15 @@ extern unsigned long _dom_ttb;
 extern unsigned long _dom_rights;
 
 #define NULL	0
+#ifdef __compiler_offsetof
 #define offsetof(TYPE,MEMBER) __compiler_offsetof(TYPE,MEMBER)
 #define container_of(ptr, type, member) ({                      \
         const typeof( ((type *)0)->member ) *__mptr = (ptr);    \
         (type *)( (char *)__mptr - offsetof(type,member) );})
-
+#else
+#define container_of(ptr, type, member) \
+	(type *)((char *)(ptr) - (char *) &((type *)0)->member)
+#endif
 extern unsigned long __hyp_end;
 
 #endif
