@@ -52,7 +52,6 @@ extern unsigned long debug_level;
 extern void show_regs(unsigned long *);
 extern void dump_pgd(unsigned long *p);
 
-//#undef DEBUG
 
 #ifdef DEBUG
 #define deb_printf(lvl, format, arg...) do { \

@@ -169,12 +169,14 @@ int hyp_preempt_enable(void)
 
 void schedule(void)
 {
+	static int task_running;
+
 	debsched("schedout\n");
 	//if (current->id)
 	event_new(EVT_SCHEDOUT);
 
 	/* throw away last domain to get a new one	*/
-	if (sched->put)
+	if (task_running && sched->put)
 		sched->put(current);
 
 	/* Be sure to have a saved context for USER domains	*/
@@ -188,6 +190,8 @@ void schedule(void)
 		wfi();
 	}
 
+	task_running = 1;
+
 	debsched("current: %d\n", current->id);
 
 	/* Reset our need to schedule		*/
@@ -195,7 +199,7 @@ void schedule(void)
 
 	/* Wakeup current domain	*/
 	event_new(EVT_SCHEDIN);
-	//debsched("wakeup at %08lx\n", current->ctx.sregs.pc);
+	debsched("wakeup at %08lx\n", current->ctx.sregs.pc);
 	/* The specific scheduler will take care on interrupt processing */
 	if (sched->wake)
 		sched->wake(current);

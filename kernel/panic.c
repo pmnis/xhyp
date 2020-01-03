@@ -45,7 +45,7 @@
 //unsigned long debug_level = DEB_PANIC;
 unsigned long debug_level = DEB_PANIC|DEB_INFO;
 //unsigned long debug_level = DEB_PANIC|DEB_INFO|DEB_IRQ;
-//unsigned long debug_level = DEB_PANIC|DEB_INFO|DEB_SCHED;
+//unsigned long debug_level = DEB_PANIC|DEB_INFO|DEB_SCHED|DEB_ABT;
 //unsigned long debug_level = DEB_PANIC|DEB_INFO|DEB_SCHED|DEB_CTX|DEB_HYP|DEB_IRQ;
 //
 

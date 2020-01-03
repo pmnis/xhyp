@@ -107,7 +107,7 @@ struct domain {
 	int		ctx_level;
 	int		no_check;
 	char name[32];
-/* Load stuff 					*/
+/* Load values 					*/
 	unsigned long	base_addr;
 	unsigned long	vbase_addr;
 	unsigned long	load_addr;
@@ -120,11 +120,12 @@ struct domain {
 	unsigned long	size;
 	unsigned long	device;
 	unsigned long	device_size;
-/* Scheduling stuff				*/
+/* Scheduling values				*/
 	unsigned long	prio;
 	int 		budget;
 	int		period;
 	int		slice_start;
+	int		slice;
 	int		deadline;
 	int		original_deadline;
 	int		allocated_slices;

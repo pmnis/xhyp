@@ -55,8 +55,8 @@ static void sched_delete(struct domain *d)
 		context_save();
 }
 
-static int min_period;
-static int max_budget;
+static int min_period = 1000;
+static int max_budget = 200;
 static int sync_period;
 #define MAX_PERIODS 13
 #define MAX_BUDGETS 8
@@ -121,7 +121,7 @@ static struct domain *edf_init_deadlines(void)
 
 static struct domain *edf_get_earliest(void)
 {
-	struct domain *d, *candidate;
+	struct domain *d, *candidate = NULL;
 	struct list *l;
 
 	list_for_each(l, &task_list) {
@@ -141,6 +141,8 @@ static int edf_schedulable(void)
 	edf_init_deadlines();
 	while (t < sync_period) {
 		d = edf_get_earliest();
+		if (!d)
+			return -ENOMEM;
 		if ((t + d->budget) > d->deadline)
 			return -E2BIG;
 		if (t < d->slice_start)
@@ -150,6 +152,7 @@ static int edf_schedulable(void)
 		d->deadline += d->period;
 	}
 	edf_init_deadlines();
+	debsched("OK\n");
 	return 0;
 }
 
@@ -177,31 +180,56 @@ static int add_to_sched(struct domain *d)
 	if (bad_budget(d->budget))
 		goto error;
 
+	/* EDF do not allow interrupts for now */
 	list_add_tail(&d->list, &task_list);
+	debsched("d->period   %d\n", d->period);
+	debsched("d->budget   %d\n", d->budget);
 	if (edf_schedulable() == 0)
 		return 0;
 	list_del(&d->list);
 
 error:
+	debsched("min_period  %d\n", min_period);
+	debsched("max_budget  %d\n", max_budget);
+	debsched("sync_period %d\n", sync_period);
+	debsched("d->period   %d\n", d->period);
+	debsched("d->budget   %d\n", d->budget);
+	while(1);
 	return -EINVAL;
 }
 
 static int sched_get(void)
 {
 	struct domain *d = edf_get_earliest();
+	static int count = 0;
 
-	if (!d)
+	if (!d) {
+		debsched("No task!\n");
 		return 0;
-	if (d->slice_start > jiffies)
+	}
+	if (d->slice_start > jiffies) {
+		debsched("Not in slice!\n");
 		return 0;
+	}
+	current = d;
+	d->slice = d->budget;
+	//debsched("d->period   %d\n", d->period);
+	//debsched("d->budget   %d\n", d->budget);
+	//debsched("d->deadline %d\n", d->deadline);
+	//debsched("d->slice_start %d\n", d->slice_start);
+	//debsched("id %d\n", d->id);
+	if (count++ == -1) while(1);
 	return d->id;
 }
 
 static void sched_put(struct domain *d)
 {
-	debsched("\n");
-	d->deadline += d->period;
-	d->slice_start += d->period;
+	//debsched("\n");
+	//debsched("d->period   %d\n", d->period);
+	//debsched("d->budget   %d\n", d->budget);
+	//debsched("d->deadline %d\n", d->deadline);
+	//debsched("d->slice_start %d\n", d->slice_start);
+	//debsched("id %d\n", d->id);
 }
 
 static void sched_sleep(struct domain *d)
@@ -225,11 +253,14 @@ static void sched_stop(struct domain *d)
 	schedule();
 }
 
+static int edf_reschedule;
 static void sched_yield(void)
 {
-	debsched("\n");
-	current->state = DSTATE_READY;
-	schedule();
+	//debsched("\n");
+	if (edf_reschedule) {
+		edf_reschedule = 0;
+		schedule();
+	}
 }
 
 static void sched_wakeup(struct domain *d)
@@ -268,7 +299,7 @@ static int sched_add(struct domain *d)
 static int sched_dom(struct domain *d)
 {
 	if (add_to_sched(d) < 0) {
-		debsched("adding domain %d : overschdule\n", d->id);
+		debsched("adding domain %d : overschedule\n", d->id);
 		return -EFAULT;
 	}
 	d->state = DSTATE_READY;
@@ -281,8 +312,15 @@ static int sched_dom(struct domain *d)
  */
 static void sched_slice(void)
 {
-	debsched("\n");
-	sched->need_resched = 1;
+	struct domain *d = current;
+
+	debsched("current->slice: %d\n", d->slice);
+	if (d->slice-- <= 0) {
+		d->deadline += d->period;
+		d->slice_start += d->period;
+		debsched("-------- RESCHEDULE ------\n");
+		edf_reschedule = 1;
+	}
 }
 
 /*

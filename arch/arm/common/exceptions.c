@@ -87,7 +87,7 @@ void exp_irq(void)
 
 	debirq("sched->need_resched: %d\n", sched->need_resched);
 	if (sched->need_resched) {
-		schedule();
+		sched->yield();
 	}
 
 	event_new(EVT_IRQOUT);
@@ -244,7 +244,7 @@ unsigned long exp_swi(unsigned long *instr)
 
 	if (sched->need_resched) {
 		debctx("sched->need_resched: %d\n", sched->need_resched);
-		schedule();
+		sched->yield();
 	}
 
 	event_new(EVT_SYSOUT);

@@ -70,6 +70,7 @@ void time_tick(void)
 	struct domain *d;
 
 	jiffies++;
+	debsched("jiffies: %d\n", jiffies);
 	d = &domain_table[0];
 	d->jiffies = jiffies;
 	for(i = 1; i < nb_domains; i++) {
