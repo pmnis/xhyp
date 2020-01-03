@@ -651,7 +651,8 @@ int hyp_hyp(void)
 			break;
 		}
 		if (d->state == DSTATE_READY)
-			sched->add(d);
+			if (sched->add(d))
+				panic(&d->ctx_syscall, "Sched error");
 		return 1;
 	default:
 		return 0;

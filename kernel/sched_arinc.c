@@ -72,10 +72,11 @@ static void sched_add_from_sleepq(struct domain *d)
 	d->state = DSTATE_READY;
 }
 
-static void sched_add(struct domain *d)
+static int sched_add(struct domain *d)
 {
 	debsched("\n");
 	d->state = DSTATE_READY;
+	return 0;
 }
 
 static void sched_delete(struct domain *d)
@@ -180,10 +181,11 @@ static void sched_wakeup(struct domain *d)
 	d->state = DSTATE_RUN;
 }
 
-static void sched_dom(struct domain *d)
+static int sched_dom(struct domain *d)
 {
 	d->state = DSTATE_READY;
 	debsched("domain %d ready\n", d->id);
+	return 0;
 }
 /*
  * Simple time slice handling

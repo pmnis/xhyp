@@ -26,6 +26,7 @@
 #include <xhyp/event.h>
 #include <xhyp/hyp.h>
 #include <xhyp/irq.h>
+#include <xhyp/errno.h>
 
 static struct runqueue runqueue;
 struct list sleep_queue;
@@ -66,7 +67,7 @@ static void sched_add_from_sleepq(struct domain *d)
 	runqueue.bitmap |= 0x01 << d->prio ;
 }
 
-static void sched_add(struct domain *d)
+static int sched_add(struct domain *d)
 {
 	debsched("adding %d\n", d->id);
 
@@ -75,6 +76,7 @@ static void sched_add(struct domain *d)
 	runqueue.bitmap |= 0x01 << d->prio ;
 
 	debsched("runqueue.bitmap: %08lx\n", runqueue.bitmap);
+	return 0;
 }
 
 static void sched_delete(struct domain *d)
@@ -229,14 +231,15 @@ static void sched_wakeup(struct domain *d)
 	sched_show_d();
 }
 
-static void sched_dom(struct domain *d)
+static int sched_dom(struct domain *d)
 {
 	if (d->state != DSTATE_READY)
-		return;
+		return -EINVAL;
 	d->allocated_slices = 1;
 	d->budget = 1;
 	debsched("------allocated slices: %d\n", d->allocated_slices);
 	sched_add(d);
+	return 0;
 }
 /*
  * Simple time slice handling

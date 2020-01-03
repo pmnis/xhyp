@@ -34,7 +34,7 @@ struct xhyp_scheduler {
 	char name[32];
 	int need_resched;
 	int preempt_count;
-	void (*add) (struct domain *);
+	int (*add) (struct domain *);
 	void (*add_from_sleep) (struct domain *);
 	void (*add_to_sleep) (struct domain *);
 	void (*delete) (struct domain *);
@@ -43,7 +43,7 @@ struct xhyp_scheduler {
 	void (*sleep) (struct domain *);
 	void (*wake) (struct domain *);
 	void (*stop) (struct domain *);
-	void (*start) (struct domain *);
+	int (*start) (struct domain *);
 	void (*restart) (struct domain *);
 	void (*kill) (struct domain *);
 	void (*yield) (void);
