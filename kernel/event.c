@@ -215,7 +215,7 @@ void evt_hook_schedout(struct event *e)
  */
 void evt_hook_abtin(struct event *e)
 {
-	current->t_abtin = e->timestamp;
+	xhyp->t_abtin = e->timestamp;
 }
 
 /** @fn void evt_hook_abtout(struct event *e)
@@ -224,7 +224,7 @@ void evt_hook_abtin(struct event *e)
  */
 void evt_hook_abtout(struct event *e)
 {
-	adjust_time(&current->t_abt, &current->t_abtin, &e->timestamp);
+	adjust_time(&xhyp->t_abt, &xhyp->t_abtin, &e->timestamp);
 }
 
 /** @fn void evt_hook_irqin(struct event *e)
@@ -233,7 +233,7 @@ void evt_hook_abtout(struct event *e)
  */
 void evt_hook_irqin(struct event *e)
 {
-	current->t_irqin = e->timestamp;
+	xhyp->t_irqin = e->timestamp;
 }
 
 /** @fn void evt_hook_irqout(struct event *e)
@@ -242,41 +242,9 @@ void evt_hook_irqin(struct event *e)
  */
 void evt_hook_irqout(struct event *e)
 {
-	adjust_time(&current->t_irq, &current->t_irqin, &e->timestamp);
+	adjust_time(&xhyp->t_irq, &xhyp->t_irqin, &e->timestamp);
 }
 
-/** @fn void evt_hook_irqret(struct event *e)
- * @brief hook to handle the end of the irq mode
- * @param e the event structure to handle
- */
-void evt_hook_irqret(struct event *e)
-{
-
-	current->t_mode = current->mode;
-	switch (current->t_mode) {
-	case DMODE_IRQ:
-		current->t_irqin = e->timestamp;
-		break;
-	case DMODE_ABT:
-		current->t_abtin = e->timestamp;
-		break;
-	case DMODE_SVC:
-		current->t_sysin = e->timestamp;
-		break;
-	case DMODE_USR:
-		current->t_usrin = e->timestamp;
-		break;
-	}
-
-}
-/** @fn void evt_hook_wfi(struct event *e)
- * @brief hook to handle the idle (wfi) mode
- * @param e the event structure to handle
- */
-void evt_hook_wfi(struct event *e)
-{
-	adjust_time(&current->t_irq, &current->t_irqin, &e->timestamp);
-}
 
 /** @fn void event_init(void)
  * @brief Initialisation of the event system
@@ -286,12 +254,10 @@ void event_init(void)
 	ring_init(&trace_ring, event_buffer, MAX_EVENT * sizeof(struct event));
 	evt_hook[EVT_IRQIN] = evt_hook_irqin;
 	evt_hook[EVT_IRQOUT] = evt_hook_irqout;
-	evt_hook[EVT_IRQRET] = evt_hook_irqret;
 	evt_hook[EVT_SCHEDIN] = evt_hook_schedin;
 	evt_hook[EVT_SCHEDOUT] = evt_hook_schedout;
 	evt_hook[EVT_ABTIN] = evt_hook_abtin;
 	evt_hook[EVT_ABTOUT] = evt_hook_abtout;
-	evt_hook[EVT_WFI] = evt_hook_wfi;
 }
 
 int event_nr = 0;
