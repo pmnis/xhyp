@@ -20,6 +20,7 @@ void irq_handler(unsigned long mask)
 {
 	unsigned long irq_mask = xhyp_sp->v_irq_pending;
 
+	delay(20);
 	irq++;
 	xhyp_sp->v_irq_ack |= irq_mask ;
 	_hyp_irq_return(0);
