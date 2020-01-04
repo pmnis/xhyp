@@ -336,7 +336,10 @@ int setup_domains(void)
 		/* Initialize the domain's list	*/
 		list_init(&d->list);
 		/* Add this domain to the scheduler	*/
-		sched->start(d);
+		if (sched->start(d)) {
+			debpanic("Scheduler error\n");
+			exit();
+		}
 		/* Setup shared page	*/
 		shared_page_init(d);
 		event_new(EVT_START);

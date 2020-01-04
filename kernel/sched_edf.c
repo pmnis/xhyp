@@ -28,6 +28,8 @@
 #include <xhyp/irq.h>
 #include <xhyp/errno.h>
 
+static int jpm;
+
 void edf_error(int i, char *reason)
 {
 	debsched("SLOT[%02d]: %s\n", i, reason);
@@ -37,30 +39,33 @@ void edf_error(int i, char *reason)
 
 static void sched_add_to_sleepq(struct domain *d)
 {
+	debsched("\n"); while(1);
 	debsched("\n");
 	d->state = DSTATE_SLEEP;
 }
 
 static void sched_add_from_sleepq(struct domain *d)
 {
+	//debsched("\n"); while(1);
 	debsched("\n");
 	d->state = DSTATE_READY;
 }
 
 static void sched_delete(struct domain *d)
 {
+	debsched("\n"); while(1);
 	debsched("\n");
 	d->state = DSTATE_DEAD;
 	if (d == current)
 		context_save();
 }
 
-static int min_period = 1000;
+static int min_period = 5000;
 static int max_budget = 200;
 static int sync_period;
-#define MAX_PERIODS 13
+#define MAX_PERIODS 14
 #define MAX_BUDGETS 8
-static int periods[MAX_PERIODS] = { 5, 10, 20, 50, 100, 200, 300, 400, 500, 600, 700, 800, 1000 };
+static int periods[MAX_PERIODS] = { 5, 10, 20, 50, 100, 200, 300, 400, 500, 600, 700, 800, 1000, 4000 };
 static int budgets[MAX_BUDGETS] = { 1, 2, 5, 10, 20, 50, 100, 200 };
 
 static int bad_budget(int b)
@@ -81,6 +86,7 @@ static int new_sync_period(int p)
 	int i;
 	int a,b;
 
+debsched("\n");
 	for (i = 0; i < MAX_PERIODS && periods[i] != p; i++)
 		;
 	if (i >= MAX_PERIODS)
@@ -111,6 +117,7 @@ static struct domain *edf_init_deadlines(void)
 	struct domain *d;
 	struct list *l;
 
+debsched("\n");
 	list_for_each(l, &task_list) {
 		d = list_entry(l, struct domain, list);
 		d->deadline = d->original_deadline;
@@ -124,9 +131,11 @@ static struct domain *edf_get_earliest(void)
 	struct domain *d, *candidate = NULL;
 	struct list *l;
 
+debsched("\n");
 	list_for_each(l, &task_list) {
 		d = list_entry(l, struct domain, list);
 
+debsched("%d : %d\n", d->id, d->deadline);
 		if ((!candidate) || (d->deadline < candidate->deadline))
 			candidate = d;
 	}
@@ -138,6 +147,7 @@ static int edf_schedulable(void)
 	struct domain *d;
 	int t = 0;
 
+debsched("\n");
 	edf_init_deadlines();
 	while (t < sync_period) {
 		d = edf_get_earliest();
@@ -165,6 +175,7 @@ static int edf_schedulable(void)
  */
 static int add_to_sched(struct domain *d)
 {
+debsched("\n");
 	if (min_period > d->period)
 		min_period = d->period;
 
@@ -194,31 +205,31 @@ error:
 	debsched("sync_period %d\n", sync_period);
 	debsched("d->period   %d\n", d->period);
 	debsched("d->budget   %d\n", d->budget);
-	while(1);
+	//while(1);
 	return -EINVAL;
 }
 
 static int sched_get(void)
 {
 	struct domain *d = edf_get_earliest();
-	static int count = 0;
+	//static int count = 0;
 
 	if (!d) {
 		debsched("No task!\n");
 		return 0;
 	}
-	if (d->slice_start > jiffies) {
+	if (d->slice_start > jpm * jiffies) {
 		debsched("Not in slice!\n");
 		return 0;
 	}
 	current = d;
 	d->slice = d->budget;
-	//debsched("d->period   %d\n", d->period);
-	//debsched("d->budget   %d\n", d->budget);
-	//debsched("d->deadline %d\n", d->deadline);
-	//debsched("d->slice_start %d\n", d->slice_start);
-	//debsched("id %d\n", d->id);
-	if (count++ == -1) while(1);
+	debsched("d->period   %d\n", d->period);
+	debsched("d->budget   %d\n", d->budget);
+	debsched("d->deadline %d\n", d->deadline);
+	debsched("d->slice_start %d\n", d->slice_start);
+	debsched("id %d\n", d->id);
+	//if (count++ == 10) while(1);
 	return d->id;
 }
 
@@ -235,27 +246,37 @@ static void sched_put(struct domain *d)
 static void sched_sleep(struct domain *d)
 {
 	debsched("\n");
+	debsched("%d\n", d->id);
 	d->state = DSTATE_SLEEP;
-	schedule();
+	//while (d->slice) {
+		//debsched("wait %d\n", d->slice);
+	//}
+	//sched->yield();
+	//schedule();
 }
 
 static void sched_kill(struct domain *d)
 {
-	debsched("\n");
+	debsched("%d\n", d->id);
+	debsched("domain %d\n", d->id);
 	d->state = DSTATE_DEAD;
+	debsched("\n"); while(1);
 	schedule();
 }
 
 static void sched_stop(struct domain *d)
 {
+	debsched("%d\n", d->id);
 	debsched("\n");
 	d->state = DSTATE_STOP;
+	debsched("\n"); while(1);
 	schedule();
 }
 
 static int edf_reschedule;
 static void sched_yield(void)
 {
+	debsched("%d deadl %d jiffies %dms\n", current->id, current->deadline, jpm * jiffies);
 	//debsched("\n");
 	if (edf_reschedule) {
 		edf_reschedule = 0;
@@ -289,6 +310,7 @@ static void sched_wakeup(struct domain *d)
 static int sched_add(struct domain *d)
 {
 	debsched("adding domain %d : only static EDF\n", d->id);
+	debsched("\n"); while(1);
 	return -EFAULT;
 }
 
@@ -330,6 +352,7 @@ static void sched_init(void)
 {
 	debsched("%s ... ready\n", sched->name);
 	list_init(&task_list);
+	jpm = 1000 / HZ;
 }
 
 static struct xhyp_scheduler sched_edf = {
