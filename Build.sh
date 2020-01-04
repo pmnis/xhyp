@@ -142,7 +142,7 @@ function build_cscope
 	find  . -type f -name "*.c"  > cscope.files 
 	find  . -type f -name "*.S"  >> cscope.files 
 	find  . -type f -name "*.h"  >> cscope.files
-	cscope -I ./include -k -b -icscope.files
+	cscope -I ./include -k -b -i cscope.files
 }
 
 function build_doc
