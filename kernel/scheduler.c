@@ -172,7 +172,6 @@ void schedule(void)
 	static int task_running;
 
 	debsched("schedout\n");
-	//if (current->id)
 	event_new(EVT_SCHEDOUT);
 
 	/* throw away last domain to get a new one	*/
@@ -198,11 +197,11 @@ void schedule(void)
 	sched->need_resched = 0;
 
 	/* Wakeup current domain	*/
-	event_new(EVT_SCHEDIN);
 	debsched("wakeup at %08lx\n", current->ctx.sregs.pc);
 	/* The specific scheduler will take care on interrupt processing */
 	if (sched->wake)
 		sched->wake(current);
+	event_new(EVT_SCHEDIN);
 	//context_trace(&current->ctx);
 	context_restore();
 	switch_to();
