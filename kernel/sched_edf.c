@@ -296,7 +296,8 @@ static void sched_wakeup(struct domain *d)
 		debsched("E %08lx P %08lx M %08lx\n", s->v_irq_enabled,
 			 s->v_irq_pending, s->v_irq_mask);
 		if (s->v_irq_enabled & s->v_irq_pending & ~s->v_irq_mask)
-			mode_new(d, DMODE_IRQ);
+			if (!(s->v_cpsr & dis_irqs))
+				mode_new(d, DMODE_IRQ);
 	default:
 		break;
 	}
