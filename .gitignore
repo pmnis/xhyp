@@ -23,3 +23,6 @@ cscope*
 xhyp
 xhyp.nm
 main
+tests/irq/irq_test
+tests/linux_init/init
+
