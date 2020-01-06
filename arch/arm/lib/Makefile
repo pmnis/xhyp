@@ -10,13 +10,13 @@ mlib.a: $(OBJS)
 	ar r ../../../lib/mlib.a $(OBJS)
 
 _divsi3.o: _divsi3.S
-	$(CC) $(AFLAGS) -c _divsi3.S -I $(INCLUDE)
+	$(CC) $(AFLAGS) $(DEBFLGS) -c _divsi3.S -I $(INCLUDE)
 
 _udivsi3.o: _udivsi3.S
-	$(CC) $(AFLAGS) -c _udivsi3.S -I $(INCLUDE)
+	$(CC) $(AFLAGS) $(DEBFLGS) -c _udivsi3.S -I $(INCLUDE)
 
 _umodsi3.o: _umodsi3.S
-	$(CC) $(AFLAGS) -c _umodsi3.S -I $(INCLUDE)
+	$(CC) $(AFLAGS) $(DEBFLGS) -c _umodsi3.S -I $(INCLUDE)
 
 clean:
 	rm -f *.o *.a

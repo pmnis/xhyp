@@ -5,7 +5,7 @@ xhyp.a: $(OBJS)
 	ar r ../../../lib/xhyp.a $(OBJS)
 
 bss.o: bss.S
-	$(CC) $(AFLAGS) -c bss.S -DTEXT_BASE=$(LD_ADDR) -I $(INCLUDE)
+	$(CC) $(AFLAGS) $(DEBFLGS) -c bss.S -DTEXT_BASE=$(LD_ADDR) -I $(INCLUDE)
 
 clean:
 	@rm -f *.o *.a
