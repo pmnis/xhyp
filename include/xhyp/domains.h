@@ -126,6 +126,7 @@ struct domain {
 	int		period;
 	int		slice_start;
 	int		slice;
+	int		nb_slices;
 	int		deadline;
 	int		original_deadline;
 	int		allocated_slices;
