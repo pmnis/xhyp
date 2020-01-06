@@ -14,33 +14,30 @@ struct shared_page *xhyp_sp = (struct shared_page *) (0x02000000);
 static unsigned long irq_stack[LSTACK_SIZE];
 
 volatile int irq = 0;
-void delay(unsigned long max);
+int delay(unsigned long max)
+{
+	unsigned long end = xhyp_sp->jiffies + max;
+	int elapsed;
+
+	while (end > xhyp_sp->jiffies)
+		elapsed++;
+	return xhyp_sp->jiffies;
+}
+
 
 void irq_handler(unsigned long mask)
 {
 	unsigned long irq_mask = xhyp_sp->v_irq_pending;
 
-	delay(20);
 	irq++;
+	delay(20);
 	xhyp_sp->v_irq_ack |= irq_mask ;
 	_hyp_irq_return(0);
 }
 
-#define MAX	10000000
-void delay(unsigned long max)
-{
-	int i = 0;
-	int j = 0;
-	int k = 0;
-
-	while (i++ < max)
-		while (j++ < MAX)
-			while (k++ < MAX);
-}
-
-unsigned long *p = 0;
 void start_kernel(void)
 {
+	int t;
 
 	printf("This is the IRQ test program\n");
 	printf("Request irq_handler\n");
@@ -51,8 +48,8 @@ void start_kernel(void)
 	while(1) {
 		_hyp_irq_disable(0);
 		printf("Irq dis: IRQ %d cpsr %02lx\n", irq, xhyp_sp->v_cpsr);
-		delay(90);
-		printf("Irq dis: IRQ %d cpsr %02lx\n", irq, xhyp_sp->v_cpsr);
+		t = delay(90);
+		printf("%08d Irq dis: IRQ %d cpsr %02lx\n", t, irq, xhyp_sp->v_cpsr);
 		_hyp_irq_enable(0);
 		printf("Irq ena: IRQ %d cpsr %02lx\n", irq, xhyp_sp->v_cpsr);
 		delay(90);
