@@ -7,6 +7,8 @@
 #include <xhyp/hyp.h>
 #include <xhyp/event.h>
 
+#include <xhyp/arinc.h>
+
 #include <colors.h>
 
 #include <autoconf.h>
@@ -49,8 +51,12 @@ int cmd_help(char *s, char *args)
 	printk("console DID : give console to domain DID\n");
 	printk("ps          : domains status\n");
 	printk("psl         : domains long status\n");
+	printk("start DID   : start a domain\n");
+	printk("stop  DID   : stop a domain\n");
 	printk("dmesg NB    : NB trace events\n");
 	printk("events      : per domain events count\n");
+	printk("ag          : get current ARINC plan\n");
+	printk("as          : set new ARINC plan\n");
 	printk("color       : set coloring\n");
 	return 0;
 }
@@ -135,6 +141,55 @@ struct major_frame plan[5] = {
 	{},
 };
 
+int first_time = 1;
+int cmd_major_set(char *s, char *args)
+{
+	int n;
+	int p = -1;
+
+	if (first_time) {
+		first_time = 0;
+		_hyp_hyp(HYPCMD_GET_PLAN, 0, &plan[0]);
+	}
+
+	if (!args)
+		p = 1;
+	else 
+		n = sscanf(args, "%d", &p);
+
+	if (n != 1 || p > 4) {
+		printk("Invalid plan number %d\n", p);
+		return 0;
+	}
+
+	if (plan[p].minor_count)
+		_hyp_hyp(HYPCMD_SET_PLAN, 0, &plan[p]);
+	else
+		printk("Unknown plan number %d\n", p);
+
+	return 0;
+}
+
+int cmd_major_get(char *s, char *args)
+{
+	int i;
+	struct minor_frame *f;
+
+	if (_hyp_hyp(HYPCMD_GET_PLAN, 0, &mf)) {
+		printk("Major frame period %d start %d size %d\n", mf.frame_period, mf.frame_start, mf.frame_size);
+		printk("%04s %03s %05s %04s\n", "id", "pid", "start", "size");
+		for (i = 0; i < mf.minor_count; i++) {
+			f = &mf.minor[i];
+			colors[0] = '0' + f->dom_id;
+			if (color_on)
+				printk("%s%s", COLOR, colors);
+			printk("[%02d] %3d %5d %4d\n", i, f->dom_id, f->slot_start, f->slot_size);
+		}
+	reset_color();
+	}
+	return 0;
+}
+
 char *ps_str_type[] = { "H", "D", "R", "G" };
 char *ps_str_mode[] = { "N", "S", "I", "U" };
 unsigned long total = 0;
@@ -162,7 +217,7 @@ int cmd_ps(char *s, char *args)
 
 	printk("  ID Tp St Pr ");
 	printk("%11s %11s %11s %11s %-11s %-4s\n", "IRQ", "ABT", "SYS", "USR", "Name", "%USE");
-	for (i = 0; i < NB_DOMAINS; i++) {
+	for (i = 1; i < NB_DOMAINS; i++) {
 		if (_hyp_hyp(HYPCMD_DOM_GET, i, &d)) {
 			s_time[i] = (d.t_irq.tv_sec + d.t_abt.tv_sec + d.t_sys.tv_sec + d.t_usr.tv_sec);
 			u_time[i] = d.t_irq.tv_usec + d.t_abt.tv_usec + d.t_sys.tv_usec + d.t_usr.tv_usec;
@@ -170,11 +225,11 @@ int cmd_ps(char *s, char *args)
 		}
 	}
 	total = 0;
-	for (i = 0; i < NB_DOMAINS; i++) {
+	for (i = 1; i < NB_DOMAINS; i++) {
 		d_time[i] = s_time[i];
 		total += d_time[i];
 	}
-	for (i = 0; i < NB_DOMAINS; i++) {
+	for (i = 1; i < NB_DOMAINS; i++) {
 		if (_hyp_hyp(HYPCMD_DOM_GET, i, &d)) {
 			colors[0] = '0' + i;
 			if (!i) colors[0] = '9';
@@ -202,10 +257,11 @@ int cmd_psl(char *s, char *args)
 	int i;
 	struct domain d;
 
+	//printk("SP at %p size SP: %d\n", xhyp_sp, sizeof(struct shared_page));
 	printk("  ID Tp St Md oM base_add load_add   rights ");
-	printk("Pr Bg Pd     sl     ir     nr  hy  irq_mask irq_enab irq_pend Name"
+	printk("Pr   Bg   Pd     sl     ir     nr  hy  irq_mask irq_enab irq_pend Name"
 		"\n");
-	for (i = 0; i < NB_DOMAINS; i++) {
+	for (i = 1; i < NB_DOMAINS; i++) {
 		if (_hyp_hyp(HYPCMD_DOM_GET, i, &d)) {
 			colors[0] = '0' + i;
 			if (color_on)
@@ -215,10 +271,10 @@ int cmd_psl(char *s, char *args)
 				ps_str_mode[d.mode], ps_str_mode[d.old_mode]);
 			printk(" %08x %08x %08x", 
 				 d.base_addr, d.load_addr, d.rights);
-			printk(" %2d %2d %2d", 
+			printk(" %2d %4d %4d", 
 				 d.prio, d.budget, d.period);
 			printk(" %6d %6d %6d %3d", 
-				 d.slices, d.irq, d.nb_hypercalls, d.hypercall);
+				 d.nb_slices, d.irq, d.nb_hypercalls, d.hypercall);
 			printk("  %08x %08x %08x", 
 				 d.d_irq_mask, d.d_irq_enabled, d.d_irq_pending);
 			printk(" %-08s ", d.name);
@@ -278,7 +334,6 @@ int cmd_start(char *s, char *args)
 {
 	return togle(1, args);
 }
-
 int cmd_stop(char *s, char *args)
 {
 	return togle(0, args);
@@ -336,6 +391,8 @@ struct command command[] = {
 	{"qport",	cmd_fifo},
 	{"ps",		cmd_ps},
 	{"psl",		cmd_psl},
+	{"as",		cmd_major_set},
+	{"ag",		cmd_major_get},
 	{"stop",	cmd_stop},
 	{"start",	cmd_start},
 	{"dmesg",	cmd_dmesg},
@@ -413,6 +470,7 @@ void poll_qports(void )
 		if (fifo_empty(&qp->fifo)) {
 			continue;
 		}
+		//printk("%d\n", qp->remote);
 		_hyp_preempt_disable();
 		while ((n = fifo_get(&qp->fifo, fifo_buffer, 64)) > 0) {
 			fifo_buffer[n] = 0;
@@ -435,16 +493,28 @@ void serial_poll(void)
 void timer_irq(void)
 {
 	/* Nothing yet	*/
+	//_hyp_console("timer_irq\n", 10);
 	poll_qports();
 }
 
 void handler(unsigned long msk)
 {
+	//char p[256];
 	unsigned long mask = xhyp_sp->v_irq_pending;
 
 	xhyp_sp->v_irq_pending = 0;
+	//sprintf(p, "msk: %08lx\n", mask);
+	//_hyp_console(p, strlen(p));
 	if (mask & IRQ_MASK_TIMER)
 		timer_irq();
+#ifndef CONFIG_ARINC
+	if (mask & IRQ_MASK_QPORT)
+		poll_qports();
+	if (mask & IRQ_MASK_UART)
+		serial_irq();
+	if (mask & IRQ_MASK_EVENT)
+		printk("Event on sampling port: %08lx\n", xhyp_sp->sampling_port);
+#endif
 
 	/* acknowledge the irq	*/
 	xhyp_sp->v_irq_ack = mask;
@@ -488,6 +558,9 @@ void start_kernel(void)
 
 	_hyp_irq_request(handler, irq_stack + STACK_SIZE);
 	_hyp_irq_enable(IRQ_MASK_TIMER);
+#ifndef CONFIG_ARINC
+	_hyp_irq_enable(IRQ_MASK_UART);
+#endif
 	_hyp_irq_enable(IRQ_MASK_EVENT);
 	_hyp_irq_enable(IRQ_MASK_QPORT);
 	f &= ~(IRQ_MASK_TIMER|IRQ_MASK_EVENT|IRQ_MASK_QPORT);
@@ -515,8 +588,10 @@ void start_kernel(void)
 		s = gets(cmd_buffer);
 		f = IRQ_mask(-1);
 		interprete(s);
+#ifdef CONFIG_ARINC
 		printk("Serial poll\n");
 		serial_poll();
+#endif
 		IRQ_mask(0);
 		wait_next_period();
 	}

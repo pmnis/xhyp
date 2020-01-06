@@ -64,7 +64,7 @@ int cmd_help(char *s, char *args)
 int cmd_fifo(char *s, char *args)
 {
 	int i;
-	struct queuing_port *qp;
+	queuing_port_t *qp;
 
 	printk("bytes in qport\n");
 
@@ -232,6 +232,7 @@ int cmd_ps(char *s, char *args)
 	for (i = 0; i < NB_DOMAINS; i++) {
 		if (_hyp_hyp(HYPCMD_DOM_GET, i, &d)) {
 			colors[0] = '0' + i;
+			if (!i) colors[0] = '9';
 			if (color_on)
 				printk("%s%s", COLOR, colors);
 			printk("[%2d] %2s %2s",
@@ -457,7 +458,7 @@ void serial_irq(void)
 
 void poll_qports(void )
 {
-	struct queuing_port *qp;
+	queuing_port_t *qp;
 	int i;
 	int n;
 
@@ -523,7 +524,7 @@ void handler(unsigned long msk)
 
 void qport_init(void)
 {
-	struct queuing_port *qp;
+	queuing_port_t *qp;
 	int i;
 
 	for (i = 0, qp = xhyp_sp->qp; i < (NB_QUEUING_PORT/2); i++, qp++) {
