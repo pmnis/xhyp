@@ -55,8 +55,11 @@ void irq_init(void)
 void wfi(void)
 {
 	event_new(EVT_WFI);
-	sched->need_resched++;
-	_wfi();
+	//sched->need_resched++;
+	//_wfi();
+	_cpu_it_enable(0);
+	while(1)
+		;
 }
 
 /*
@@ -82,7 +85,6 @@ void send_irq(struct domain *d, unsigned long irq)
 	if (!(s->v_irq_enabled & irq))
 		return;
 	s->v_irq_pending |= irq;
-	d->irq++;
 	debirq("sending irq %d to domain %d\n", irq, d->id);
 
 	switch (d->state) {
@@ -165,6 +167,7 @@ int hyp_irq_return(void)
 	/* But we need to say we did and increment the ctx_level	*/
 	current->ctx_level++;
 	event_new(EVT_SCHEDOUT);
+	event_new(EVT_SYSOUT);
 	mode_restore(current);
 	event_new(EVT_SCHEDIN);
 	context_restore();
