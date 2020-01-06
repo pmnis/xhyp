@@ -184,8 +184,11 @@ void schedule(void)
 	/* Choose the new current domain 		*/
 	/* Wait for interrupt if no domain found	*/
 	while (!sched->get()) {
+		unsigned long cpsr;
+
 		current = idle_domain;
-		debsched("\n");
+		cpsr = _get_cpsr();
+		debsched("cpsr %08lx\n", cpsr);
 		wfi();
 	}
 

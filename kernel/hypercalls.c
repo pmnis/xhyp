@@ -335,7 +335,6 @@ int hyp_syscall(void)
 
 	last_spsr = _context->sregs.spsr;
 
-
 	debinfo("       syscall %d\n", callnr);
 	if (current->mode != DMODE_USR) {
 		event_dump_last(20);
@@ -382,7 +381,6 @@ int hyp_syscall_return(void)
 	show_ctx(&current->ctx);
         context_restore();
         switch_to();
-
 
 	return 0;
 }
@@ -607,7 +605,7 @@ int hyp_hyp(void)
 #endif
 	}
 
-	if (n > nb_usr_domains || n == 0) {
+	if (n > nb_usr_domains) {
 		return 0;
 	}
 
@@ -620,6 +618,8 @@ int hyp_hyp(void)
 		memcpy(d, &domain_table[n], sizeof(*d));
 		return 1;
 	case HYPCMD_DOM_STOP:
+		if (!n)
+			return 0;
 		d = &domain_table[n];
 		if (d->state == DSTATE_STOP) return 0;
 		d->old_state = d->state;
@@ -627,6 +627,8 @@ int hyp_hyp(void)
 		sched->delete(d);
 		return 1;
 	case HYPCMD_DOM_RESTART:
+		if (!n)
+			return 0;
 		d = &domain_table[n];
 		//debinfo("%d: old %d state %d\n", d->id, d->old_state, d->state);
 		switch (d->state) {

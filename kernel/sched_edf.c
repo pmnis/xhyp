@@ -46,9 +46,9 @@ static void sched_add_to_sleepq(struct domain *d)
 
 static void sched_add_from_sleepq(struct domain *d)
 {
-	//debsched("\n"); while(1);
-	debsched("\n");
+	debsched("id %d READY\n", d->id);
 	d->state = DSTATE_READY;
+	debsched("\n"); while(1);
 }
 
 static void sched_delete(struct domain *d)
@@ -175,7 +175,7 @@ debsched("\n");
  */
 static int add_to_sched(struct domain *d)
 {
-debsched("\n");
+	debsched("id %d\n", current->id);
 	if (min_period > d->period)
 		min_period = d->period;
 
@@ -212,30 +212,36 @@ error:
 static int sched_get(void)
 {
 	struct domain *d = edf_get_earliest();
-	//static int count = 0;
 
-	if (!d) {
+	if (!d || !d->id) {
 		debsched("No task!\n");
 		return 0;
 	}
+	debsched("id: %d\n", d->id);
+	if (d->state != DSTATE_READY) {
+		debinfo("%d not ready state %d ms %d\n", d->id, d->state, jpm * jiffies);
+		d->deadline += d->period;
+		d->slice_start += d->period;
+		return 0;
+	}
+
 	if (d->slice_start > jpm * jiffies) {
-		debsched("Not in slice!\n");
+		debsched("%d out slice: start %d ms %d\n", d->id, d->slice_start, jpm * jiffies);
 		return 0;
 	}
 	current = d;
 	d->slice = d->budget;
 	debsched("d->period   %d\n", d->period);
 	debsched("d->budget   %d\n", d->budget);
-	debsched("d->deadline %d\n", d->deadline);
+	debsched("d %d deadline %d\n", d->id, d->deadline);
 	debsched("d->slice_start %d\n", d->slice_start);
 	debsched("id %d\n", d->id);
-	//if (count++ == 10) while(1);
 	return d->id;
 }
 
 static void sched_put(struct domain *d)
 {
-	//debsched("\n");
+	debsched("id %d\n", current->id);
 	//debsched("d->period   %d\n", d->period);
 	//debsched("d->budget   %d\n", d->budget);
 	//debsched("d->deadline %d\n", d->deadline);
@@ -245,14 +251,10 @@ static void sched_put(struct domain *d)
 
 static void sched_sleep(struct domain *d)
 {
-	debsched("\n");
 	debsched("%d\n", d->id);
-	d->state = DSTATE_SLEEP;
-	//while (d->slice) {
-		//debsched("wait %d\n", d->slice);
-	//}
-	//sched->yield();
-	//schedule();
+	d->deadline += d->period;
+	d->slice_start += d->period;
+	sched->need_resched++;
 }
 
 static void sched_kill(struct domain *d)
@@ -273,15 +275,17 @@ static void sched_stop(struct domain *d)
 	schedule();
 }
 
-static int edf_reschedule;
 static void sched_yield(void)
 {
-	debsched("%d deadl %d jiffies %dms\n", current->id, current->deadline, jpm * jiffies);
-	//debsched("\n");
-	if (edf_reschedule) {
-		edf_reschedule = 0;
-		schedule();
+	struct domain *d = current;
+
+	debsched("%d\n", d->id);
+	if (d->id) {
+		debsched("%d deadl %d jiffies %dms\n", d->id, d->deadline, jpm * jiffies);
+		d->deadline += d->period;
+		d->slice_start += d->period;
 	}
+	schedule();
 }
 
 static void sched_wakeup(struct domain *d)
@@ -296,12 +300,14 @@ static void sched_wakeup(struct domain *d)
 		debsched("E %08lx P %08lx M %08lx\n", s->v_irq_enabled,
 			 s->v_irq_pending, s->v_irq_mask);
 		if (s->v_irq_enabled & s->v_irq_pending & ~s->v_irq_mask)
-			if (!(s->v_cpsr & dis_irqs))
+			if (!(s->v_cpsr & dis_irqs)) {
+				d->irq++;
 				mode_new(d, DMODE_IRQ);
+			}
 	default:
 		break;
 	}
-	d->state = DSTATE_RUN;
+	d->state = DSTATE_READY;
 }
 
 /*
@@ -337,13 +343,9 @@ static void sched_slice(void)
 {
 	struct domain *d = current;
 
-	debsched("current->slice: %d\n", d->slice);
-	if (d->slice-- <= 0) {
-		d->deadline += d->period;
-		d->slice_start += d->period;
-		debsched("-------- RESCHEDULE ------\n");
-		edf_reschedule = 1;
-	}
+	debsched("current %d slice: %d\n", d->id, d->slice);
+	if (d->id && (d->slice-- <= 0))
+		sched_yield();
 }
 
 /*

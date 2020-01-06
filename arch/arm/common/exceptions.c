@@ -79,18 +79,17 @@ void show_irqs(void)
 void exp_irq(void)
 {
 	debirq("\n");
-	event_new(EVT_IRQ);
+	event_new(EVT_IRQIN);
 
 	debirq("switch from %08lx\n", _context->sregs.pc);
 	do_irq();
 
-
+	event_new(EVT_IRQOUT);
 	debirq("sched->need_resched: %d\n", sched->need_resched);
 	if (sched->need_resched) {
 		sched->yield();
 	}
 
-	event_new(EVT_IRQOUT);
 	debctx("\n");
 	debirq("switch to %08lx\n", _context->sregs.pc);
         context_verify();
