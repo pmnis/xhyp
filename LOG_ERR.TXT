@@ -1,0 +1,8 @@
+00342560 Irq dis: IRQ 3423 cpsr d3
+Irq ena: IRQ 3424 cpsr 13
+Irq ena: IRQ 3426 cpsr 13
+Irq dis: IRQ 3426 cpsr d3
+3427.610227 [2/1/1]-(io.c-147)-stdio_write: stdio_write Bad addr in r1: 00000000 convert to 00000000
+3427.610598 [2/1/1]-(io.c-148)-stdio_write: d->base_addr 06000000 XHYP_MEM_SIZE 02000000 (d->offset << SECTION_SHIFT) 00000000
+3427.611106 [2/1/1]-(io.c-149)-stdio_write: Killing domain 2
+
