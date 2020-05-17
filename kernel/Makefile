@@ -27,4 +27,5 @@ endif
 
 xhyp.a: $(OBJS)
 	ar r ../lib/xhyp.a $(OBJS)
+	#cp main.o ../objs/
 

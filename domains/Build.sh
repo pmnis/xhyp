@@ -2,18 +2,28 @@
 
 function copy_os
 {
+print "copy_os"
 	print "Creating binary for ${PWD##*/}"
-	${CROSS_COMPILE}objcopy os -O  binary domain.bin
+	${CROSS_COMPILE}objcopy os -O  binary domain$1.bin
 	return $?
 }
 
 function build_domain
 {
+print "build_domain"
 	[[ -r os ]] || {
 		print "No OS found for domain: ${PWD##*/}"
 		exit 1
 	}
-	copy_os
+	copy_os $1
+
+        arm-linux-objcopy  \
+                --input-target binary \
+                --output-target elf32-littlearm  \
+                --binary-architecture arm \
+                --rename-section .data=.dm${1} \
+                domain$1.bin domain.ho
+
 	return $?
 }
 
@@ -26,10 +36,10 @@ function build_domain
 }
 
 # no, then build domains
-for d in domain??
+for d in 1 2 3 4
 do
-	print "Building $d $*"
-	[[ -d ${d} ]] || exit 1
-	( cd $d && build_domain $*) || exit 1
+	print "Building domain0$d "
+	[[ -d domain0${d} ]] || exit 1
+	( cd domain0$d && build_domain $d) || exit 1
 done
 
