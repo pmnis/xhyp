@@ -20,3 +20,10 @@ mconf
 *.a
 cscope*
 *.dom
+tests/irq/irq_test
+tests/linux_init/init
+tests/mmu/main
+xhyp
+xhyp.nm
+drivers/console/main
+
