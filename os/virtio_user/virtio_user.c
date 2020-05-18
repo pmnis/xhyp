@@ -1,4 +1,4 @@
-#include <sys/shared_page.h>
+#include <xhyp/shared_page.h>
 #include <sys/xhyp.h>
 //#include <xhyp/irq.h>
 #include <xhyp/stdlib.h>
@@ -21,7 +21,7 @@ void start_kernel(void)
 	_hyp_console("virtio user\n", 12);
 
 	while(1) {
-		_hyp_console("x-hyp: ", 12);
+		//_hyp_console("virtio_user", 12);
 		wait_next_period();
 	}
 }

@@ -567,7 +567,7 @@ void start_kernel(void)
 		printk(COLOR_BLACK);
 	serial_init();
 
-	printk("Hello\n");
+	printk("Starting virtio driver\n");
 
 	_hyp_irq_enable(0);
 	while(1) {

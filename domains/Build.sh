@@ -2,7 +2,6 @@
 
 function copy_os
 {
-print "copy_os"
 	print "Creating binary for ${PWD##*/}"
 	${CROSS_COMPILE}objcopy os -O  binary domain$1.bin
 	return $?
@@ -10,7 +9,6 @@ print "copy_os"
 
 function build_domain
 {
-print "build_domain"
 	[[ -r os ]] || {
 		print "No OS found for domain: ${PWD##*/}"
 		exit 1
@@ -38,7 +36,6 @@ print "build_domain"
 # no, then build domains
 for d in 1 2 3 4
 do
-	print "Building domain0$d "
 	[[ -d domain0${d} ]] || exit 1
 	( cd domain0$d && build_domain $d) || exit 1
 done

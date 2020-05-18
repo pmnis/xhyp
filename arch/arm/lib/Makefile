@@ -19,5 +19,5 @@ _umodsi3.o: _umodsi3.S
 	$(CC) $(AFLAGS) -c _umodsi3.S -I $(INCLUDE)
 
 clean:
-	rm -f *.o *.a
+	@rm -f *.o *.a
 

@@ -7,9 +7,11 @@ do
 	[[ ! ${type} || ${type: 0:1} == "#" ]] && continue
 	[[ ${type}  == "major" ]] && continue
 	[[ ${type}  == "minor" ]] && : $(( nb_frame++ ))
-done < domains/arinc_table
+done < arinc_table
 
+mkdir -p ${BASEDIR}/generated
 
+{ # redirect all on generated/arinc_table.c
 cat << EOF
 /*
  * arinc.c
@@ -61,9 +63,10 @@ do
 	[[ ! ${type} || ${type:0} == "#" ]] && continue
 	[[ ${type}  == "major" ]] && major ${start} ${size} ${reste}
 	[[ ${type}  == "minor" ]] && minor ${start} ${size} ${reste}
-done < domains/arinc_table
+done < arinc_table
 
 print "},"
 print "};"
 print "struct major_frame *major = &init_major_frame;"
 
+} > ${BASEDIR}/generated/arinc_table.c

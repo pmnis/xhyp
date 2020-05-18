@@ -1,6 +1,6 @@
 #!/bin/ksh
 
-CFG="domains/config.domains"
+CFG="${BASEDIR}/domains/config.domains"
 typeset -i dom=0
 typeset -x ofst="0x00100000"
 
@@ -28,7 +28,7 @@ typeset -x ofst="0x00100000"
 } < ${CFG}
 
 
-{
+{	# This is redirected to xhyp.ld
 cat << EOF
 OUTPUT_FORMAT("elf32-littlearm", "elf32-littlearm", "elf32-littlearm")
 OUTPUT_ARCH(arm)
@@ -49,7 +49,7 @@ for ((i = 1; i <= dom; i++)) {
 	len=${size[$i]}
 	(( org += ofst ))
 	(( len -= ofst ))
-	printf "ram_dom${i} : org = 0x%08lx, l = 0x%08lx\n" ${org} ${len}
+	printf "  ram_dom${i} : org = 0x%08lx, l = 0x%08lx\n" ${org} ${len}
 }
 
 cat << EOF
@@ -113,9 +113,9 @@ cat << EOF
 
 EOF
 
-} > xhyp.ld
+} > ${BASEDIR}/xhyp.ld	# End of the redirection
 
-cat << EOF > include/xhyp/generated.h
+cat << EOF > ${BASEDIR}/include/xhyp/generated.h
 
 #define NB_DOMAINS	$((dom +1 ))
 
@@ -126,15 +126,14 @@ extern int nb_usr_domains;
 
 EOF
 
-mkdir -p generated
+mkdir -p ${BASEDIR}/generated
 {
-source scripts/Build_table
-} > generated/domain_table.c
-
+source ./Build_table.inc
+} > ${BASEDIR}/generated/domain_table.c
 
 
 for ((i = 1; i <= dom; i++)) {
-	name=$(printf "domains/domain%02d" $i)
+	name=$(printf "domain%02d" $i)
 	printf "setting path for %s : %s\n" ${name} ${path[$i]}
 	[[ -d ${name} ]] && continue
 	mkdir ${name}

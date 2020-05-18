@@ -6,8 +6,8 @@ clean:
 
 -include ../.config
 
-OBJS := main.o
-OBJS +=	domain.o panic.o irq.o scheduler.o timer.o
+#OBJS := main.o
+OBJS =	domain.o panic.o irq.o scheduler.o timer.o
 
 ifeq ("$(CONFIG_SCHED_POSIX)", "y")
 OBJS += sched_posix.o
@@ -25,7 +25,7 @@ OBJS += io.o
 endif
 
 
-xhyp.a: $(OBJS)
+xhyp.a: main.o $(OBJS)
 	ar r ../lib/xhyp.a $(OBJS)
-	#cp main.o ../objs/
+	cp main.o ../objs/
 
