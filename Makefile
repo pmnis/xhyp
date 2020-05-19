@@ -31,3 +31,5 @@ clean:
 	@rm -rf generated
 	@rm -f xhyp xhyp.ld
 
+cscope:
+	find . -name "*.[hScs]" > cscope.files
