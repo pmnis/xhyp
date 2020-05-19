@@ -2,7 +2,9 @@
 LDFLAGS:= -Bstatic -T domain.ld
 
 
-all: main.S virtio_user.o lib/lib.a domain.ld
+all: main
+
+main: main.S virtio_user.o lib/lib.a domain.ld
 	$(CC) $(AFLAGS) -c main.S
 	$(LD) $(LDFLAGS) main.o virtio_user.o lib/lib.a -o main
 	cp main ../../os/virtio.dom
