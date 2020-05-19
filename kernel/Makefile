@@ -26,6 +26,8 @@ endif
 
 
 xhyp.a: main.o $(OBJS)
+	mkdir -p ../lib
 	ar r ../lib/xhyp.a $(OBJS)
+	mkdir -p ../objs
 	cp main.o ../objs/
 

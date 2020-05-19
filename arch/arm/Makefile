@@ -9,6 +9,7 @@ subdirs:
 
 arch.a: subdirs
 	ar cr arch.a common/*.o lib/*.o
+	mkdir -p ../../objs/
 	cp versatile/start.o ../../objs/
 
 clean:
