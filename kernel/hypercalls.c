@@ -423,12 +423,14 @@ int hyp_yield(void)
  *
  * @bug this function should disapear if a console driver is present
  */
+#define CONSOLE_BUFFER_SIZE 80
+static char console_buffer[CONSOLE_BUFFER_SIZE + 1];
 int hyp_console(void)
 {
 	char *s;
 	int n;
 	char mini_buffer[2];
-	char colors[2];
+	char id[5] = "<dx> ";
 
 	n = (int) _context->regs.regs[1];
 
@@ -439,13 +441,14 @@ int hyp_console(void)
 		s = mini_buffer;
 	} else {
 		s = (char *) (virt_to_phys(current, _context->regs.regs[0]));
+		if (n >= CONSOLE_BUFFER_SIZE)
+			n = CONSOLE_BUFFER_SIZE;
+		memcpy(console_buffer, s, n);
+		console_buffer[n] = 0;
 	}
-	colors[0] = '0' + current->id;
-	colors[1] = 'm';
-	serial_write(COLOR, 3);
-	serial_write(colors, 2);
+	id[2] = '0' + current->id;
+	serial_write(id, 5);
 	serial_write(s, n);
-	serial_write(COLOR_BLACK, 5);
 	return n - 1;
 }
 /** fn int hyp_usr_return(void)
