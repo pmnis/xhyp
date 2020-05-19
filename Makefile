@@ -31,7 +31,7 @@ subdirs:
 clean:
 	@$(MAKE) -C scripts/kconfig clean
 	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done
-	@rm -rf generated
+	@rm -rf generated objs
 	@rm -f xhyp xhyp.ld
 
 cscope:
