@@ -103,7 +103,7 @@ void do_abort(unsigned long far, unsigned long dfsr)
 	debabt("pc  : %08lx\n", _context->sregs.pc);
 	debabt("dfsr: %08lx\n", dfsr);
 	debabt("far : %08lx\n", far);
-/*
+#if 1
 	debabt("lr  : %08lx\n", _context->sregs.lr);
 	debabt("sp  : %08lx\n", _context->sregs.sp);
 	debabt("r0  : %08lx\n", _context->regs.regs[0]);
@@ -114,12 +114,13 @@ void do_abort(unsigned long far, unsigned long dfsr)
 	debabt("r5  : %08lx\n", _context->regs.regs[5]);
 	debabt("r6  : %08lx\n", _context->regs.regs[6]);
 	debabt("r7  : %08lx\n", _context->regs.regs[7]);
-*/
-	//if (analyse_fault(dfsr, far)) {
-		//panic(NULL, "Unimplemented");
-	//}
-
-	//if (abt_count-- < 0) while(1);
+	if (analyse_fault(dfsr, far)) {
+		panic(NULL, "Unimplemented");
+	}
+#endif
+#if 0
+	if (abt_count-- < 0) while(1);
+#endif
 	/* if no abort handler kill the domain		*/
 	if (! s->context_abt.sregs.pc) {
 		debpanic("Abort but no handler\n");
