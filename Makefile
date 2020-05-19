@@ -17,7 +17,9 @@ SUBDIRS = lib kernel arch/arm os drivers domains
 
 LIBS = arch/arm/arch.a lib/xhyp.a lib/mlib.a lib/lib.a generated/generated.a
 
+
 all: subdirs generated
+	mkdir -p objs generated
 	$(LD)  objs/start.o objs/main.o $(LIBS) domains/domain01/domain.ho domains/domain02/domain.ho  domains/domain03/domain.ho  domains/domain04/domain.ho  -Bstatic -T xhyp.ld -o xhyp
 
 subdirs:
@@ -27,9 +29,16 @@ subdirs:
 #	./scripts/Build_arinc # > generated/arinc_table.c
 
 clean:
+	@$(MAKE) -C scripts/kconfig clean
 	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done
 	@rm -rf generated
 	@rm -f xhyp xhyp.ld
 
 cscope:
 	find . -name "*.[hScs]" > cscope.files
+
+mconf: ./scripts/kconfig/mconf
+	$(MAKE) -C scripts/kconfig
+
+menuconfig: mconf
+	./scripts/kconfig/mconf Kconfig
