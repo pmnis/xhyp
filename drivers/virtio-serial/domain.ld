@@ -10,7 +10,7 @@ MEMORY
 		ram :   org = 0x02100000 , l = 0x00e00000
 }
 
-__stack_end__ = 0x03000000 - 0x10;
+__stack_end__ = 0x02800000 - 0x10;
 
 
 SECTIONS
@@ -21,9 +21,13 @@ SECTIONS
 	.text : {
 		main.o (.text)
 		* (.text)
+		. += 64k;
 		* (.data)
+		. += 64k;
 		* (.rodata)
+		. += 64k;
 		* (.bss)
+		. += 64k;
 		* (.glue_7)
 		* (.glue_7t)
 	} > ram  =0x90909090 
