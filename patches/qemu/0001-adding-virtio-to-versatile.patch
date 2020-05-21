@@ -1,0 +1,338 @@
+From 63b6042413c167853924ac21abcd5fc0cf0543d4 Mon Sep 17 00:00:00 2001
+From: Pierre Morel <pmorel@mnis.fr>
+Date: Thu, 21 May 2020 16:13:18 +0200
+Subject: [PATCH] adding virtio to versatile
+
+Adding 3 virtio-mmio devices at 0x10208000, IRQ5
+
+Signed-off-by: Pierre Morel <pmorel@mnis.fr>
+---
+ hw/arm/versatilepb.c    |  5 ++++-
+ hw/virtio/virtio-bus.c  | 15 +++++++++++++++
+ hw/virtio/virtio-mmio.c | 17 +++++++++++++++++
+ roms/QemuMacDrivers     |  2 +-
+ roms/SLOF               |  2 +-
+ roms/ipxe               |  2 +-
+ roms/openbios           |  2 +-
+ roms/qemu-palcode       |  2 +-
+ roms/seabios            |  2 +-
+ roms/skiboot            |  2 +-
+ roms/u-boot             |  2 +-
+ 11 files changed, 44 insertions(+), 9 deletions(-)
+
+diff --git a/hw/arm/versatilepb.c b/hw/arm/versatilepb.c
+index f3c4a50b19..79cd91715a 100644
+--- a/hw/arm/versatilepb.c
++++ b/hw/arm/versatilepb.c
+@@ -295,7 +295,10 @@ static void versatile_init(MachineState *machine, int board_id)
+     sysbus_connect_irq(busdev, 0, pic[17]);
+ 
+     sysbus_create_simple("sp804", 0x101e2000, pic[4]);
+-    sysbus_create_simple("sp804", 0x101e3000, pic[5]);
++    //sysbus_create_simple("sp804", 0x101e3000, pic[5]);
++    sysbus_create_simple("virtio-mmio", 0x10208000, pic[5]);
++    sysbus_create_simple("virtio-mmio", 0x10208200, pic[5]);
++    sysbus_create_simple("virtio-mmio", 0x10208400, pic[5]);
+ 
+     sysbus_create_simple("pl061", 0x101e4000, pic[6]);
+     sysbus_create_simple("pl061", 0x101e5000, pic[7]);
+diff --git a/hw/virtio/virtio-bus.c b/hw/virtio/virtio-bus.c
+index d6332d45c3..ea1169c1c5 100644
+--- a/hw/virtio/virtio-bus.c
++++ b/hw/virtio/virtio-bus.c
+@@ -32,6 +32,7 @@
+ 
+ /* #define DEBUG_VIRTIO_BUS */
+ 
++#define DEBUG_VIRTIO_BUS
+ #ifdef DEBUG_VIRTIO_BUS
+ #define DPRINTF(fmt, ...) \
+ do { printf("virtio_bus: " fmt , ## __VA_ARGS__); } while (0)
+@@ -39,6 +40,8 @@ do { printf("virtio_bus: " fmt , ## __VA_ARGS__); } while (0)
+ #define DPRINTF(fmt, ...) do { } while (0)
+ #endif
+ 
++#define PMR(fmt, ...) printf("QMR %s:%d" fmt , __func__, __LINE__, ## __VA_ARGS__);
++
+ /* A VirtIODevice is being plugged */
+ void virtio_bus_device_plugged(VirtIODevice *vdev, Error **errp)
+ {
+@@ -90,6 +93,7 @@ void virtio_bus_reset(VirtioBusState *bus)
+ {
+     VirtIODevice *vdev = virtio_bus_get_device(bus);
+ 
++    PMR("\n");
+     DPRINTF("%s: reset device.\n", BUS(bus)->name);
+     if (vdev != NULL) {
+         virtio_reset(vdev);
+@@ -103,6 +107,7 @@ void virtio_bus_device_unplugged(VirtIODevice *vdev)
+     BusState *qbus = BUS(qdev_get_parent_bus(qdev));
+     VirtioBusClass *klass = VIRTIO_BUS_GET_CLASS(qbus);
+ 
++    PMR("\n");
+     DPRINTF("%s: remove device.\n", qbus->name);
+ 
+     if (vdev != NULL) {
+@@ -124,6 +129,7 @@ uint16_t virtio_bus_get_vdev_id(VirtioBusState *bus)
+ size_t virtio_bus_get_vdev_config_len(VirtioBusState *bus)
+ {
+     VirtIODevice *vdev = virtio_bus_get_device(bus);
++    PMR("\n");
+     assert(vdev != NULL);
+     return vdev->config_len;
+ }
+@@ -134,6 +140,7 @@ uint32_t virtio_bus_get_vdev_bad_features(VirtioBusState *bus)
+     VirtIODevice *vdev = virtio_bus_get_device(bus);
+     VirtioDeviceClass *k;
+ 
++    PMR("\n");
+     assert(vdev != NULL);
+     k = VIRTIO_DEVICE_GET_CLASS(vdev);
+     if (k->bad_features != NULL) {
+@@ -149,6 +156,7 @@ void virtio_bus_get_vdev_config(VirtioBusState *bus, uint8_t *config)
+     VirtIODevice *vdev = virtio_bus_get_device(bus);
+     VirtioDeviceClass *k;
+ 
++    PMR("\n");
+     assert(vdev != NULL);
+     k = VIRTIO_DEVICE_GET_CLASS(vdev);
+     if (k->get_config != NULL) {
+@@ -162,6 +170,7 @@ void virtio_bus_set_vdev_config(VirtioBusState *bus, uint8_t *config)
+     VirtIODevice *vdev = virtio_bus_get_device(bus);
+     VirtioDeviceClass *k;
+ 
++    PMR("\n");
+     assert(vdev != NULL);
+     k = VIRTIO_DEVICE_GET_CLASS(vdev);
+     if (k->set_config != NULL) {
+@@ -252,6 +261,7 @@ bool virtio_bus_ioeventfd_enabled(VirtioBusState *bus)
+     VirtioBusClass *k = VIRTIO_BUS_GET_CLASS(bus);
+     DeviceState *proxy = DEVICE(BUS(bus)->parent);
+ 
++    PMR("\n");
+     return k->ioeventfd_assign && k->ioeventfd_enabled(proxy);
+ }
+ 
+@@ -268,6 +278,7 @@ int virtio_bus_set_host_notifier(VirtioBusState *bus, int n, bool assign)
+     EventNotifier *notifier = virtio_queue_get_host_notifier(vq);
+     int r = 0;
+ 
++    PMR("\n");
+     if (!k->ioeventfd_assign) {
+         return -ENOSYS;
+     }
+@@ -297,6 +308,7 @@ int virtio_bus_set_host_notifier(VirtioBusState *bus, int n, bool assign)
+ 
+ void virtio_bus_cleanup_host_notifier(VirtioBusState *bus, int n)
+ {
++    PMR("\n");
+     VirtIODevice *vdev = virtio_bus_get_device(bus);
+     VirtQueue *vq = virtio_get_queue(vdev, n);
+     EventNotifier *notifier = virtio_queue_get_host_notifier(vq);
+@@ -310,6 +322,7 @@ void virtio_bus_cleanup_host_notifier(VirtioBusState *bus, int n)
+ 
+ static char *virtio_bus_get_dev_path(DeviceState *dev)
+ {
++    PMR("\n");
+     BusState *bus = qdev_get_parent_bus(dev);
+     DeviceState *proxy = DEVICE(bus->parent);
+     return qdev_get_dev_path(proxy);
+@@ -317,11 +330,13 @@ static char *virtio_bus_get_dev_path(DeviceState *dev)
+ 
+ static char *virtio_bus_get_fw_dev_path(DeviceState *dev)
+ {
++    PMR("\n");
+     return NULL;
+ }
+ 
+ static void virtio_bus_class_init(ObjectClass *klass, void *data)
+ {
++    PMR("\n");
+     BusClass *bus_class = BUS_CLASS(klass);
+     bus_class->get_dev_path = virtio_bus_get_dev_path;
+     bus_class->get_fw_dev_path = virtio_bus_get_fw_dev_path;
+diff --git a/hw/virtio/virtio-mmio.c b/hw/virtio/virtio-mmio.c
+index f12d1595aa..8e714f7985 100644
+--- a/hw/virtio/virtio-mmio.c
++++ b/hw/virtio/virtio-mmio.c
+@@ -34,6 +34,9 @@
+ #include "qemu/log.h"
+ #include "trace.h"
+ 
++#define PMR(fmt, ...) \
++        printf("QMR %s:%d" fmt , __func__, __LINE__, ## __VA_ARGS__);
++
+ static bool virtio_mmio_ioeventfd_enabled(DeviceState *d)
+ {
+     return kvm_eventfds_enabled();
+@@ -83,6 +86,7 @@ static uint64_t virtio_mmio_read(void *opaque, hwaddr offset, unsigned size)
+     VirtIOMMIOProxy *proxy = (VirtIOMMIOProxy *)opaque;
+     VirtIODevice *vdev = virtio_bus_get_device(&proxy->bus);
+ 
++    PMR("\n");
+     trace_virtio_mmio_read(offset);
+ 
+     if (!vdev) {
+@@ -225,6 +229,7 @@ static void virtio_mmio_write(void *opaque, hwaddr offset, uint64_t value,
+     VirtIOMMIOProxy *proxy = (VirtIOMMIOProxy *)opaque;
+     VirtIODevice *vdev = virtio_bus_get_device(&proxy->bus);
+ 
++    PMR("\n");
+     trace_virtio_mmio_write_offset(offset, value);
+ 
+     if (!vdev) {
+@@ -565,6 +570,7 @@ static void virtio_mmio_save_extra_state(DeviceState *opaque, QEMUFile *f)
+ {
+     VirtIOMMIOProxy *proxy = VIRTIO_MMIO(opaque);
+ 
++    PMR("\n");
+     vmstate_save_state(f, &vmstate_virtio_mmio, proxy, NULL);
+ }
+ 
+@@ -572,6 +578,7 @@ static int virtio_mmio_load_extra_state(DeviceState *opaque, QEMUFile *f)
+ {
+     VirtIOMMIOProxy *proxy = VIRTIO_MMIO(opaque);
+ 
++    PMR("\n");
+     return vmstate_load_state(f, &vmstate_virtio_mmio, proxy, 1);
+ }
+ 
+@@ -579,6 +586,7 @@ static bool virtio_mmio_has_extra_state(DeviceState *opaque)
+ {
+     VirtIOMMIOProxy *proxy = VIRTIO_MMIO(opaque);
+ 
++    PMR("\n");
+     return !proxy->legacy;
+ }
+ 
+@@ -587,6 +595,7 @@ static void virtio_mmio_reset(DeviceState *d)
+     VirtIOMMIOProxy *proxy = VIRTIO_MMIO(d);
+     int i;
+ 
++    PMR("\n");
+     virtio_mmio_stop_ioeventfd(proxy);
+     virtio_bus_reset(&proxy->bus);
+     proxy->host_features_sel = 0;
+@@ -615,6 +624,7 @@ static int virtio_mmio_set_guest_notifier(DeviceState *d, int n, bool assign,
+     VirtQueue *vq = virtio_get_queue(vdev, n);
+     EventNotifier *notifier = virtio_queue_get_guest_notifier(vq);
+ 
++    PMR("\n");
+     if (assign) {
+         int r = event_notifier_init(notifier, 0);
+         if (r < 0) {
+@@ -642,6 +652,7 @@ static int virtio_mmio_set_guest_notifiers(DeviceState *d, int nvqs,
+     bool with_irqfd = false;
+     int r, n;
+ 
++    PMR("\n");
+     nvqs = MIN(nvqs, VIRTIO_QUEUE_MAX);
+ 
+     for (n = 0; n < nvqs; n++) {
+@@ -669,6 +680,7 @@ assign_error:
+ static void virtio_mmio_pre_plugged(DeviceState *d, Error **errp)
+ {
+     VirtIOMMIOProxy *proxy = VIRTIO_MMIO(d);
++    PMR("\n");
+     VirtIODevice *vdev = virtio_bus_get_device(&proxy->bus);
+ 
+     if (!proxy->legacy) {
+@@ -690,6 +702,7 @@ static void virtio_mmio_realizefn(DeviceState *d, Error **errp)
+     VirtIOMMIOProxy *proxy = VIRTIO_MMIO(d);
+     SysBusDevice *sbd = SYS_BUS_DEVICE(d);
+ 
++    PMR("\n");
+     qbus_create_inplace(&proxy->bus, sizeof(proxy->bus), TYPE_VIRTIO_MMIO_BUS,
+                         d, NULL);
+     sysbus_init_irq(sbd, &proxy->irq);
+@@ -709,6 +722,7 @@ static void virtio_mmio_class_init(ObjectClass *klass, void *data)
+ {
+     DeviceClass *dc = DEVICE_CLASS(klass);
+ 
++    PMR("\n");
+     dc->realize = virtio_mmio_realizefn;
+     dc->reset = virtio_mmio_reset;
+     set_bit(DEVICE_CATEGORY_MISC, dc->categories);
+@@ -732,6 +746,7 @@ static char *virtio_mmio_bus_get_dev_path(DeviceState *dev)
+     SysBusDevice *proxy_sbd;
+     char *path;
+ 
++    PMR("\n");
+     virtio_mmio_bus = qdev_get_parent_bus(dev);
+     virtio_mmio_proxy = VIRTIO_MMIO(virtio_mmio_bus->parent);
+     proxy_path = qdev_get_dev_path(DEVICE(virtio_mmio_proxy));
+@@ -769,6 +784,7 @@ static void virtio_mmio_bus_class_init(ObjectClass *klass, void *data)
+     BusClass *bus_class = BUS_CLASS(klass);
+     VirtioBusClass *k = VIRTIO_BUS_CLASS(klass);
+ 
++    PMR("\n");
+     k->notify = virtio_mmio_update_irq;
+     k->save_config = virtio_mmio_save_config;
+     k->load_config = virtio_mmio_load_config;
+@@ -793,6 +809,7 @@ static const TypeInfo virtio_mmio_bus_info = {
+ 
+ static void virtio_mmio_register_types(void)
+ {
++    PMR("\n");
+     type_register_static(&virtio_mmio_bus_info);
+     type_register_static(&virtio_mmio_info);
+ }
+diff --git a/roms/QemuMacDrivers b/roms/QemuMacDrivers
+index 90c488d5f4..d4e7d7ac66 160000
+--- a/roms/QemuMacDrivers
++++ b/roms/QemuMacDrivers
+@@ -1 +1 @@
+-Subproject commit 90c488d5f4a407342247b9ea869df1c2d9c8e266
++Subproject commit d4e7d7ac663fcb55f1b93575445fcbca372f17a7
+diff --git a/roms/SLOF b/roms/SLOF
+index 8e012d6fdd..89f519f09b 160000
+--- a/roms/SLOF
++++ b/roms/SLOF
+@@ -1 +1 @@
+-Subproject commit 8e012d6fddb62be833d746cef3f03e6c8beecde0
++Subproject commit 89f519f09bf850918b60526e50409afb663418aa
+diff --git a/roms/ipxe b/roms/ipxe
+index de4565cbe7..0600d3ae94 160000
+--- a/roms/ipxe
++++ b/roms/ipxe
+@@ -1 +1 @@
+-Subproject commit de4565cbe76ea9f7913a01f331be3ee901bb6e17
++Subproject commit 0600d3ae94f93efd10fc6b3c7420a9557a3a1670
+diff --git a/roms/openbios b/roms/openbios
+index 7e5b89e429..314d4f8263 160000
+--- a/roms/openbios
++++ b/roms/openbios
+@@ -1 +1 @@
+-Subproject commit 7e5b89e4295063d8eba55b9c8ce8bc681c2d129a
++Subproject commit 314d4f8263972604b1c17e8de460de6b45483bd6
+diff --git a/roms/qemu-palcode b/roms/qemu-palcode
+index bf0e136988..f3c7e44c70 160000
+--- a/roms/qemu-palcode
++++ b/roms/qemu-palcode
+@@ -1 +1 @@
+-Subproject commit bf0e13698872450164fa7040da36a95d2d4b326f
++Subproject commit f3c7e44c70254975df2a00af39701eafbac4d471
+diff --git a/roms/seabios b/roms/seabios
+index f21b5a4aeb..5f4c7b13cd 160000
+--- a/roms/seabios
++++ b/roms/seabios
+@@ -1 +1 @@
+-Subproject commit f21b5a4aeb020f2a5e2c6503f906a9349dd2f069
++Subproject commit 5f4c7b13cdf9c450eb55645f4362ea58fa61b79b
+diff --git a/roms/skiboot b/roms/skiboot
+index 3a6fdede6c..762d0082f1 160000
+--- a/roms/skiboot
++++ b/roms/skiboot
+@@ -1 +1 @@
+-Subproject commit 3a6fdede6ce117facec0108afe716cf5d0472c3f
++Subproject commit 762d0082f18e4fb921a2d44a1051b02d8b0f6381
+diff --git a/roms/u-boot b/roms/u-boot
+index d3689267f9..d85ca029f2 160000
+--- a/roms/u-boot
++++ b/roms/u-boot
+@@ -1 +1 @@
+-Subproject commit d3689267f92c5956e09cc7d1baa4700141662bff
++Subproject commit d85ca029f257b53a96da6c2fb421e78a003a9943
+-- 
+2.17.1
+
