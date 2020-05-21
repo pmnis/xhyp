@@ -69,7 +69,7 @@ for (( i = 1 ; i <= dom ; i++ )) {
 	}
 [[ ${dom_type[$i]} == "DTYPE_DRV" ]] && {
 		printf "        .device = CONFIG_PERIPH_BASE, \n"
-		printf "        .device_size = 0x00200000, \n"
+		printf "        .device_size = 0x01000000, \n"
 	}
 	printf "	.mode = DMODE_SVC, \n"
 	print "	},"
