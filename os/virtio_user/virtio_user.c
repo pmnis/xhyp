@@ -33,7 +33,6 @@ void start_kernel(void)
 	_hyp_console("virtio user\n", 13);
 
 	while(1) {
-		_hyp_console("virtio_user\n", 13);
 		delay(1000);
 	}
 }
