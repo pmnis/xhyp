@@ -52,14 +52,15 @@ extern void wfi(void);
 
 /* This should go elsewhere, depending on hardware */
 #define IRQ_SHIFT_TIMER		4
+#define IRQ_SHIFT_VIRTIO	5
 #define IRQ_SHIFT_UART		12
 #define IRQ_SHIFT_EVENT		16
 #define IRQ_SHIFT_QPORT		17
-#define IRQ_SHIFT_VIRTIO	18
 
 #define IRQ_MASK_TIMER	(1 << IRQ_SHIFT_TIMER)
+#define IRQ_MASK_VIRTIO	(1 << IRQ_SHIFT_VIRTIO)
 #define IRQ_MASK_UART	(1 << IRQ_SHIFT_UART)
 #define IRQ_MASK_EVENT	(1 << IRQ_SHIFT_EVENT)
-#define IRQ_MASK_QPORT	(1 << IRQ_SHIFT_VIRTIO)
+#define IRQ_MASK_QPORT	(1 << IRQ_SHIFT_QPORT)
 
 #endif

@@ -17,6 +17,9 @@ struct virtio_registers	*virtio_p = (struct virtio_registers *) (PERIPH_BASE + V
 
 struct shared_page *xhyp_sp = (struct shared_page *) (0x02000000);
 
+#define IRQ_STACK_SIZE  1024
+static unsigned long irq_stack[IRQ_STACK_SIZE];
+
 #define wait_next_period()		_hyp_idle()
 
 char buffer[80];
@@ -36,6 +39,22 @@ int serial_write(const void *s, int n)
 int virtio_mmio_init_queues(int evnum)
 {
 	return -1;
+}
+
+static void virtio_irq(unsigned long msk)
+{
+	unsigned long mask = xhyp_sp->v_irq_pending;
+
+	xhyp_sp->v_irq_pending = 0;
+	if (!(mask & IRQ_MASK_VIRTIO))
+		goto end;
+
+	write("IRQ VIRTIO\n");
+end:
+	/* acknowledge the irq  */
+	xhyp_sp->v_irq_ack = mask;
+	/* Return from interrupt	*/
+	_hyp_irq_return(0);
 }
 
 static void virtio_mmio_probe(int devnum)
@@ -101,6 +120,10 @@ static void virtio_mmio_probe(int devnum)
 		write("Virtio[%d]: status	 : 0x%08x\n", devnum, dev_p->status);
 		return;
 	}
+
+	/* Request VIRTIO IRQ */
+	_hyp_irq_request(virtio_irq, irq_stack + STACK_SIZE);
+	_hyp_irq_enable(IRQ_MASK_TIMER);
 
 	write("Virtio[%d]: guestfeatures_0: 0x%08x\n", devnum, dev_p->guest_features);
 	write("Virtio[%d]: guestfeatures_1: 0x%08x\n", devnum, dev_p->guest_features_sel);
