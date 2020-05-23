@@ -258,6 +258,7 @@ void shared_page_init(struct domain *d)
 	s->cp15_c0 = _get_c0();
 	s->cp15_c1 = _get_c1();
 	s->v_cpsr = m_svc | dis_irqs;
+	s->prefix = d->base_addr;
 }
 
 /** @fn int setup_domains(void)

@@ -54,12 +54,8 @@ struct shared_page {
 	unsigned long 	v_irq_mask;
 	unsigned long	reserved[10];
 	unsigned long	sampling_port;
-#ifdef CONFIG_QPORT_CONSOLE
 	struct queuing_port	qp[NB_QUEUING_PORT];
-#endif
-#ifdef CONFIG_VIRTIO_CONSOLE
-	struct virtio_ring	virtio_ring;
-#endif
+	unsigned long	prefix;
 	unsigned long	end_magic;
 };
 
