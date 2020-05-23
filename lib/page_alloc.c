@@ -10,12 +10,6 @@
 #include <xhyp/irq.h>
 #include <xhyp/page_alloc.h>
 
-#define write(fmt, ...) \
-        do { sprintf(buffer, fmt, ## __VA_ARGS__); \
-        _hyp_console(buffer, strlen(buffer)); } \
-        while (0)
-
-
 static unsigned long first;
 struct page {
 	unsigned long pfn;
@@ -32,8 +26,6 @@ int pgalloc_init(unsigned long start, unsigned long count)
 {
 	unsigned long size;
 	unsigned long p;
-
-	write("start %08lx count %08lx\n", start, count);
 
 	size = count * sizeof(struct page);
 	first = start + (size >> PAGE_SHIFT) + 1;
