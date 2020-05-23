@@ -56,6 +56,8 @@ struct shared_page {
 	unsigned long	sampling_port;
 	struct queuing_port	qp[NB_QUEUING_PORT];
 	unsigned long	prefix;
+	unsigned long	mem_start;
+	unsigned long	mem_end;
 	unsigned long	end_magic;
 };
 

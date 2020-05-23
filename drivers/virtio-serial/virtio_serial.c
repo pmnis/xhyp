@@ -8,6 +8,7 @@
 #include <xhyp/virtio_mmio.h>
 #include <xhyp/virtio.h>
 #include <xhyp/irq.h>
+#include <xhyp/page_alloc.h>
 
 #include <autoconf.h>
 
@@ -140,9 +141,28 @@ static void virtio_mmio_init(void)
 		virtio_mmio_probe(i);
 }
 
+extern void *alloc_start;
+static void memory_init(void)
+{
+	unsigned long start, count;
+
+	write("memory start : %08x\n", &alloc_start);
+
+	start = (((unsigned long) &alloc_start) >> PAGE_SHIFT) + 1;
+	count = (xhyp_sp->mem_end >> PAGE_SHIFT) - start;
+
+	write("memory prefix: %08x\n", xhyp_sp->prefix);
+	write("memory start : %08x\n", xhyp_sp->mem_start);
+	write("memory end   : %08x\n", xhyp_sp->mem_end);
+	write("pgalloc: %08lx %08lx\n", start, count);
+
+	pgalloc_init(start, count);
+}
+
 void start_kernel(void)
 {
 	write("virtio_serial %08x\n", &virtio_p->magic);
+	memory_init();
 	virtio_mmio_init();
 
 	while(1) {

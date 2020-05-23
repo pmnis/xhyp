@@ -31,5 +31,6 @@ SECTIONS
 		* (.glue_7)
 		* (.glue_7t)
 	} > ram  =0x90909090 
-
+	. = ALIGN(4k);
+	PROVIDE(alloc_start = .);
 }
