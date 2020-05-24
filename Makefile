@@ -13,7 +13,7 @@ export AS = $(CROSS_COMPILE)gcc
 export LD = $(CROSS_COMPILE)ld
 
 
-SUBDIRS = lib kernel arch/arm os drivers domains
+SUBDIRS = arch/arm lib kernel drivers os domains
 
 LIBS = arch/arm/arch.a lib/xhyp.a lib/mlib.a lib/lib.a generated/generated.a
 

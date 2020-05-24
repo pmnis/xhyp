@@ -1,4 +1,6 @@
 
+all: lib.a
+
 lib.a: _udivsi3.o stdlib.o fifo.o ring.o page_alloc.o
 	ar r lib.a _udivsi3.o stdlib.o fifo.o ring.o page_alloc.o
 
