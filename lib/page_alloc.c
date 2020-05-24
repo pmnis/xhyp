@@ -22,6 +22,7 @@ static unsigned long page_max;
 /*
 ** pgalloc_init: extect PFN start and PFN count
 */
+
 int pgalloc_init(unsigned long start, unsigned long count)
 {
 	unsigned long size;
@@ -58,3 +59,19 @@ void free_page(unsigned long addr)
 	p = addr >> PAGE_SHIFT;
 	page_map[p].flags &= ~PAGE_INUSE;
 }
+
+unsigned long get_pages(int count)
+{
+	unsigned long p, q;
+	int i;
+
+	for (i = 0; i < count; i++) {
+		p = get_page();
+		if (!q)
+			q = p;
+		if (!p)
+			return 0;
+	}
+	return q;
+}
+
