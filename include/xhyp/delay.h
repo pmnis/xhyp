@@ -1,6 +1,6 @@
 
 #define MAX     10000000
-static void delay(unsigned long max)
+static inline void delay(unsigned long max)
 {
 	int i = 0;
 	int j = 0;
