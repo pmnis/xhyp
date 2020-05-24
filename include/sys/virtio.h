@@ -44,4 +44,12 @@ static inline void vring_init(struct vring *vr, unsigned int num, void *p,
 		+ align-1) & ~(align - 1));
 }
 
+static inline unsigned vring_size(unsigned int num, unsigned long align)
+{
+	return ((sizeof(struct vring_desc) * num + sizeof(u16) * (3 + num)
+		+ align - 1) & ~(align - 1))
+		+ sizeof(u16) * 3 + sizeof(struct vring_used_elem) * num;
+}
+
+
 #endif

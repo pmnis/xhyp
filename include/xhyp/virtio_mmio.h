@@ -19,8 +19,8 @@ struct virtio_registers {
 	u32 queue_sel;
 	u32 queue_num_max;
 	u32 queue_num;
-	u32 queue_num_align;
-	u32 queue_num_pfn;
+	u32 queue_align;
+	u32 queue_pfn;
 	u32 queue_ready;
 	u32 reserved_48;
 	u32 reserved_4c;
