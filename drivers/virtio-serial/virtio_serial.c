@@ -57,6 +57,19 @@ int serial_write(const void *s, int n)
 	return 0;
 }
 
+int console_write(u32 *p, const void *s)
+{
+	int n = strlen(s);
+	int i;
+
+	snprintf(buffer, n, s);
+	buffer[n] = 0;
+	for (i = 0; i < n; i++)
+		*p = buffer[i];
+	return 0;
+}
+
+
 char *feature_str[64] = {
 };
 void init_feature_str(void)
@@ -323,7 +336,7 @@ void start_kernel(void)
 
 	*dev->emergency = 0x61626364;
 	while(1) {
-		//PMR("virtio_serial %08x\n", virtio_p->magic);
+		console_write(virtio_device[0].emergency, "virtio_serial\n\r");
 		delay(1000);
 	}
 }
