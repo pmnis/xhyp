@@ -25,7 +25,7 @@ struct shared_page *xhyp_sp = (struct shared_page *) (0x02000000);
 struct virtio_device {
 	struct virtio_registers *regs;
 	struct virtio_console_config *config; 
-	u64 features;
+	u32 features[2];
 	unsigned int flags;
 	int id;
 	u32 *emergency;
@@ -77,14 +77,23 @@ void init_feature_str(void)
 	feature_str[38] = "VIRTIO_TRANSPORT_F_END";
 }
 
-void show_features(u64 features)
+void show_features(struct virtio_device *dev)
 {
+	unsigned int f;
 	int i;
 
-	for (i = 0; i < 63; i++) {
-		if (features & (1ULL << 63ULL))
-			write("feature[%02d]: %s\n", 63 - i, feature_str[63 - i]);
-		features <<= 1;
+	f = dev->features[0];
+	for (i = 0; i < 32; i++) {
+		if (f & 1)
+			write("feature[%02d]: %s\n", i, feature_str[i]);
+		f >>= 1;
+	}
+
+	f = dev->features[1];
+	for (i = 0; i < 32; i++) {
+		if (f & 1)
+			write("feature[%02d]: %s\n", 32 + i, feature_str[32 + i]);
+		f >>= 1;
 	}
 }
 
@@ -143,10 +152,10 @@ void virtio_configure(struct virtio_device *dev)
 
 	conf = (struct virtio_console_config *) dev->regs->config_space;
 
-	if (dev->features & VIRTIO_CONSOLE_F_EMERG_WRITE)
+	if (dev->features[0] & VIRTIO_CONSOLE_F_EMERG_WRITE)
 		dev->emergency = &conf->emerg_wr;
 
-	if (dev->features & VIRTIO_CONSOLE_F_MULTIPORT)
+	if (dev->features[0] & VIRTIO_CONSOLE_F_MULTIPORT)
 		dev->nb_ports = conf->max_nr_ports;
 }
 
@@ -173,24 +182,23 @@ void virtio_negociate_features(struct virtio_device *dev)
 
 	/* Features */
 	vregs->host_features_sel = 1;
-	dev->features = vregs->host_features;
+	dev->features[1] = vregs->host_features;
 	write("Virtio[%d]: host_features_0: 0x%08x\n", dev->id, vregs->host_features);
-	dev->features <<= 32;
 
 	vregs->host_features_sel = 0;
-	dev->features |= vregs->host_features;
+	dev->features[0] = vregs->host_features;
 	write("Virtio[%d]: host_features_0: 0x%08x\n", dev->id, vregs->host_features);
 
-	show_features(dev->features);
+	show_features(dev);
 	/* Get configuration */
 
 	/* accept known features */
 	vregs->guest_features_sel = 1;
 	vregs->guest_features = 0; /* We do not know any feature so high */
 
+	dev->features[0] &= VIRTIO_CONSOLE_F_DEFAULT;
 	vregs->guest_features_sel = 0;
-	vregs->guest_features = (u32)(dev->features) & VIRTIO_CONSOLE_F_DEFAULT;
-
+	vregs->guest_features = dev->features[0];
 }
 
 static void virtio_mmio_probe(int devnum)
