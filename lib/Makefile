@@ -16,7 +16,7 @@ fifo.o: fifo.c $(INCLUDE)/sys/fifo.h
 
 ring.o: ring.c $(INCLUDE)/xhyp/ring.h
 
-page_alloc.c.o: page_alloc.c $(INCLUDE)/xhyp/page_alloc.h
+page_alloc.o: page_alloc.c $(INCLUDE)/xhyp/page_alloc.h
 
 clean:
 	@rm -f *.o *.a

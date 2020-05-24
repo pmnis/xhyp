@@ -12,3 +12,9 @@ unsigned long get_pages(int count);
 #define virt_to_phys(v) (v - PAGE_OFFSET)
 #define virt_to_bus(v) (virt_to_phys(v) + xhyp_sp->prefix)
 
+struct page {
+        unsigned long pfn;
+#define PAGE_INUSE      0x01
+        unsigned long flags;
+};
+
