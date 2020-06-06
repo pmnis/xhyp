@@ -12,6 +12,7 @@
 #include <xhyp/irq.h>
 #include <xhyp/page_alloc.h>
 #include <xhyp/virtio_console.h>
+#include <xhyp/errno.h>
 
 
 unsigned long periph_base = PERIPH_BASE;
@@ -57,18 +58,23 @@ int serial_write(const void *s, int n)
 	return 0;
 }
 
-int console_write(u32 *p, const void *s)
+int virtio_write(int fd, const void *s)
 {
+	struct virtio_device *vdev = &virtio_device[fd];
 	int n = strlen(s);
 	int i;
+
+	if (fd >= VIRTIO_MAX_DEVICES)
+		return -ENODEV;
+	if (!(vdev->flags & VIRTIODEV_F_INIT))
+		return -EIO;
 
 	snprintf(buffer, n, s);
 	buffer[n] = 0;
 	for (i = 0; i < n; i++)
-		*p = buffer[i];
+		*vdev->emergency = buffer[i];
 	return 0;
 }
-
 
 char *feature_str[64] = {
 };
@@ -250,8 +256,10 @@ static void virtio_mmio_probe(int devnum)
 	struct virtio_registers *vregs = &virtio_p[devnum];
 	int legacy = 0;
 
-	if (vregs->device_id == 0)
+	if (vregs->device_id == 0) {
+		PMR("No device %d\n", devnum);
 		return;
+	}
 
 	if (vregs->magic != VIRTIO_MMIO_MAGIC) {
 		PMR("Virtio: bad magic\n");
@@ -328,15 +336,12 @@ static void memory_init(void)
 
 void start_kernel(void)
 {
-	struct virtio_device *dev = &virtio_device[0];
-
 	memory_init();
 	init_feature_str();
 	virtio_mmio_init();
 
-	*dev->emergency = 0x61626364;
 	while(1) {
-		console_write(virtio_device[0].emergency, "virtio_serial\n\r");
+		virtio_write(0, "virtio_serial\n\r");
 		delay(1000);
 	}
 }
