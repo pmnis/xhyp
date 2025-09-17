@@ -207,8 +207,8 @@ reset:
 	mrc	p15, 0, r0, c1, c0, 0	@ Load control register in r0
 	bic	r0, r0, #CP1_M|CP1_C|CP1_B	@ clear memory controls
 	bic	r0, r0, #CP1_S|CP1_r	@ clear rom and system protections
-	@orr	r0, r0, #CP1_I		@ set Instruction cache
-	@orr	r0, r0, #CP1_C		@ set Data cache
+	orr	r0, r0, #CP1_I		@ set Instruction cache
+	orr	r0, r0, #CP1_C		@ set Data cache
 	orr	r0, r0, #CP1_A		@ set Address alignement
 	@orr	r0, r0, #CP1_V		@ set Exceptions in high page
 	mcr	p15, 0, r0, c1, c0, 0
@@ -218,6 +218,13 @@ reset:
 	mov	r1, r8
 	mov	r2, r9
 	ldr	sp, _c_stack
+	/* Setup frame pointer */
+	mov     ip, sp                 	@ get a copy of sp.
+	mov	fp, ip			@ last FP is ip
+	mov	lr, #0			@ Previous call address is reset
+	stmdb   sp!, {fp, ip, lr, pc}  	@ Save the frame on the stack.
+	sub     fp, ip, #4             	@ Set the new frame pointer.
+
 	ldr	pc, _start_xhyp		@ jump to C code
 
 _start_xhyp:	.word	start_xhyp
