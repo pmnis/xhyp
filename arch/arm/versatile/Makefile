@@ -1,6 +1,8 @@
 
 OBJS := start.o lib.o
 
+all: lib.o start.o 
+
 lib.o: lib.S
 	$(CC) $(AFLAGS) -c lib.S -DTEXT_BASE=$(LD_ADDR) -I $(INCLUDE)
 

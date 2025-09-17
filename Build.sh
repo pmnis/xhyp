@@ -259,9 +259,10 @@ ${CC} ${CFLAGS} -c generated/domain_table.c -o generated/domain_table.o
 	${CC} ${CFLAGS} -c generated/arinc_table.c -o generated/arinc_table.o
 }
 
-printf "Linking xhyp ... "
+printf "Linking xhyp ... \n"
 
-export LDFLAGS="-Bstatic -T xhyp.ld "
+export LDFLAGS="-Bstatic -T xhyp.ld"
+echo "${LD} ${LDFLAGS} ${LIBS} ${GENERATED} ${DOMAINS} -o xhyp"
 ${LD} ${LDFLAGS} ${LIBS} ${GENERATED} ${DOMAINS} -o xhyp
 ${CROSS_COMPILE}nm xhyp > xhyp.nm
 

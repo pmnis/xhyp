@@ -10,6 +10,7 @@
 
 
 /* Here we start				*/
+	.text
 .globl _start
 _start:
 	b	reset

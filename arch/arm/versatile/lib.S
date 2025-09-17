@@ -11,6 +11,8 @@
 	@ clean and flush TLB
 	@ clean and flush D-cache
 	@ flush I-cache
+
+	.text
 tci_loop:
 	mrc	p15, 0, r15, c7, c14, 3	@ test clean and flush D-cache
 	bne	tci_loop

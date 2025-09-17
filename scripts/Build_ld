@@ -39,20 +39,21 @@ ENTRY(_start)
 
 MEMORY
 {
-  vecteurs :   org = 0x00000000 , l = 0x00007000
-  context :   org = 0x00007000 , l = 0x00001000
-  ram      :   org = 0x00008000 , l = 0x01ff8000
+  vecteurs (rx) :   org = 0x00000000 , l = 0x00007000
+  context  (rx) :   org = 0x00007000 , l = 0x00001000
+  text     (rx) :   org = 0x00008000 , l = 0x00048000
+  ram      (rx) :   org = 0x00048000 , l = 0x01ff8000
 EOF
 typeset -x org
 typeset -x len
 
 for ((i = 1; i <= dom; i++)) {
-	print "  ram_ctl${i} : org = ${base[$i]} , l = ${ofst}"
+	print "  ram_ctl${i} (r) : org = ${base[$i]} , l = ${ofst}"
 	org=${base[$i]}
 	len=${size[$i]}
 	(( org += ofst ))
 	(( len -= ofst ))
-	printf "ram_dom${i} : org = 0x%08lx, l = 0x%08lx\n" ${org} ${len}
+	printf "  ram_dom${i} (r) : org = 0x%08lx, l = 0x%08lx\n" ${org} ${len}
 }
 
 cat << EOF
@@ -61,6 +62,7 @@ PHDRS
 {
   vect PT_LOAD;
   text PT_LOAD;
+  ram PT_LOAD;
 EOF
 
 for ((i = 1; i <= dom; i++)) {
@@ -79,27 +81,26 @@ SECTIONS
         .vect :
         {
                 objs/start.o    (.text)
+                objs/lib.o    (.text)
         } > vecteurs : vect
         .text :
         {
                 objs/main.o     (.text)
                 *(.text)
-                *(.glue_7t)
-                *(.glue_7)
-        } > ram : text
+        } > text : text
 
 
         . = ALIGN(4);
-        .rodata : { *(.rodata) } > ram
+        .rodata : { *(.rodata) } > ram : ram
 
         . = ALIGN(4);
         __data_start = .;
-        .data : { *(.data) } > ram
+        .data : { *(.data) } > ram : ram
         __data_end = .;
 
         . = ALIGN(4);
         __bss_start = .;
-        .bss : { *(.bss) } > ram
+        .bss : { *(.bss) } > ram : ram
         __bss_end = .;
 
         __hyp_end = .;
